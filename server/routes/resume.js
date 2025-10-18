@@ -10,6 +10,7 @@ import { authenticateToken } from '../middleware/auth.js';
 import { checkSubscriptionLimits, requireProSubscription } from '../middleware/subscription.js';
 import User from '../models/User.js';
 import { analyzeResumeWithAI, validateOpenAIKey } from '../services/aiService.js';
+import { generateProReportPDF } from '../services/pdfService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +42,7 @@ const fileFilter = function (req, file, cb) {
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   ];
-  
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -61,23 +62,23 @@ const upload = multer({
 const parsePDF = async (filePath) => {
   try {
     console.log('Parsing PDF file with Python:', filePath);
-    
+
     const pythonScriptPath = path.join(__dirname, '../python/pdf_parser.py');
-    
+
     return new Promise((resolve, reject) => {
       const pythonProcess = spawn('python', [pythonScriptPath, filePath]);
-      
+
       let stdout = '';
       let stderr = '';
-      
+
       pythonProcess.stdout.on('data', (data) => {
         stdout += data.toString();
       });
-      
+
       pythonProcess.stderr.on('data', (data) => {
         stderr += data.toString();
       });
-      
+
       pythonProcess.on('close', (code) => {
         if (code !== 0) {
           console.error('Python PDF parser error:', stderr);
@@ -85,34 +86,34 @@ const parsePDF = async (filePath) => {
           resolve(createFallbackPDFContent(filePath));
           return;
         }
-        
+
         try {
           const result = JSON.parse(stdout);
-          
+
           if (!result.success) {
             console.error('PDF parsing failed:', result.error);
             resolve(createFallbackPDFContent(filePath));
             return;
           }
-          
+
           console.log(`PDF parsing successful using ${result.method_used}`);
           console.log(`Extracted ${result.extracted_length} characters from ${result.line_count} lines`);
           console.log('Content preview:', result.preview);
-          
+
           resolve(result.text);
-          
+
         } catch (parseError) {
           console.error('Failed to parse Python output:', parseError);
           resolve(createFallbackPDFContent(filePath));
         }
       });
-      
+
       pythonProcess.on('error', (error) => {
         console.error('Failed to start Python process:', error);
         resolve(createFallbackPDFContent(filePath));
       });
     });
-    
+
   } catch (error) {
     console.error('PDF parsing error:', error);
     return createFallbackPDFContent(filePath);
@@ -122,12 +123,12 @@ const parsePDF = async (filePath) => {
 // Fallback PDF content creation
 const createFallbackPDFContent = (filePath) => {
   console.log('Using fallback PDF content generation');
-  
+
   const fileName = path.basename(filePath);
   const nameMatch = fileName.match(/([A-Za-z]+)[_\s-]+([A-Za-z]+)/);
   const firstName = nameMatch ? nameMatch[1] : 'John';
   const lastName = nameMatch ? nameMatch[2] : 'Doe';
-  
+
   return `PROFESSIONAL SUMMARY
 Experienced professional with proven track record in delivering high-quality results and driving business growth. Strong analytical and problem-solving skills with expertise in project management and team leadership.
 
@@ -166,14 +167,14 @@ const parseDOCX = async (filePath) => {
     console.log('Parsing DOCX file:', filePath);
     const result = await mammoth.extractRawText({ path: filePath });
     const extractedText = result.value.trim();
-    
+
     console.log('DOCX parsing successful. Text length:', extractedText.length);
     console.log('DOCX text preview:', extractedText.substring(0, 200));
-    
+
     if (!extractedText || extractedText.length < 50) {
       throw new Error('DOCX appears to be empty. Please ensure your document contains text content.');
     }
-    
+
     return extractedText;
   } catch (error) {
     console.error('DOCX parsing error:', error);
@@ -210,7 +211,7 @@ router.post('/upload', authenticateToken, checkSubscriptionLimits, (req, res, ne
     console.log('Looking for user with ID:', req.user._id);
     const user = req.user; // User is already loaded in auth middleware
     console.log('User found in upload:', user ? user.email : 'Not found');
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -222,9 +223,9 @@ router.post('/upload', authenticateToken, checkSubscriptionLimits, (req, res, ne
 
     const filePath = req.file.path;
     const fileExtension = path.extname(req.file.originalname).toLowerCase();
-    
+
     let extractedText = '';
-    
+
     try {
       // Parse file based on extension
       if (fileExtension === '.pdf') {
@@ -275,7 +276,7 @@ router.post('/upload', authenticateToken, checkSubscriptionLimits, (req, res, ne
 
   } catch (error) {
     console.error('Upload error:', error);
-    
+
     // Clean up file if it exists
     if (req.file && fs.existsSync(req.file.path)) {
       fs.unlinkSync(req.file.path);
@@ -333,7 +334,7 @@ router.get('/file/:fileId', authenticateToken, async (req, res) => {
   try {
     const { fileId } = req.params;
     const user = req.user; // User is already loaded in auth middleware
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -371,7 +372,7 @@ router.get('/scans/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const user = req.user;
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -413,7 +414,7 @@ router.post('/analyze', authenticateToken, async (req, res) => {
   try {
     const { fileId, analysisType, jobDescription } = req.body;
     const user = req.user;
-    
+
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -463,14 +464,14 @@ router.post('/analyze', authenticateToken, async (req, res) => {
       console.log('Starting AI analysis for:', analysisType);
       aiAnalysis = await analyzeResumeWithAI(scan.extractedText, analysisType, jobDescription);
       console.log('AI analysis completed successfully');
-      
+
       // Transform AI response to our format
       if (analysisType === 'quick') {
         analysisResults = {
           analysisType,
           score: aiAnalysis.overall_score,
           timestamp: new Date(),
-          feedback: aiAnalysis.recommendations?.map(rec => 
+          feedback: aiAnalysis.recommendations?.map(rec =>
             `${rec.issue}: ${rec.suggestion}${rec.example ? ` (Example: ${rec.example})` : ''}`
           ) || [],
           improvements: {
@@ -495,7 +496,7 @@ router.post('/analyze', authenticateToken, async (req, res) => {
           analysisType,
           score: aiAnalysis.overall_score,
           timestamp: new Date(),
-          feedback: aiAnalysis.recommendations?.map(rec => 
+          feedback: aiAnalysis.recommendations?.map(rec =>
             `${rec.issue}: ${rec.suggestion}${rec.keywords_to_add ? ` (Keywords: ${rec.keywords_to_add.join(', ')})` : ''}`
           ) || [],
           improvements: {
@@ -533,12 +534,12 @@ router.post('/analyze', authenticateToken, async (req, res) => {
 
     } catch (aiError) {
       console.error('AI Analysis failed:', aiError.message);
-      
+
       // Only use fallback if AI service is completely unavailable
-      if (aiError.message.includes('OpenAI client not available') || 
-          aiError.message.includes('API key not configured')) {
+      if (aiError.message.includes('OpenAI client not available') ||
+        aiError.message.includes('API key not configured')) {
         console.log('AI service not configured, using fallback analysis');
-        
+
         const isProAnalysis = analysisType === 'pro';
         analysisResults = {
           analysisType,
@@ -558,7 +559,7 @@ router.post('/analyze', authenticateToken, async (req, res) => {
             'Improve section headers for better ATS parsing'
           ],
           improvements: {
-            keywords: isProAnalysis ? 
+            keywords: isProAnalysis ?
               ['Python', 'Machine Learning', 'AWS', 'Data Analysis', 'Agile', 'Scrum', 'Leadership'] :
               ['JavaScript', 'React', 'Node.js', 'API Development', 'Agile'],
             formatting: 'Good',
@@ -634,17 +635,17 @@ function getMatchLabel(score) {
 
 function extractKeywordsFromAIAnalysis(aiAnalysis) {
   const keywords = [];
-  
+
   // Extract from missing skills
   if (aiAnalysis.missing_skills) {
     keywords.push(...aiAnalysis.missing_skills);
   }
-  
+
   // Extract from keyword gaps
   if (aiAnalysis.keyword_gaps) {
     keywords.push(...aiAnalysis.keyword_gaps);
   }
-  
+
   // Extract from recommendations
   if (aiAnalysis.recommendations) {
     aiAnalysis.recommendations.forEach(rec => {
@@ -659,8 +660,126 @@ function extractKeywordsFromAIAnalysis(aiAnalysis) {
       });
     });
   }
-  
+
   return [...new Set(keywords)].slice(0, 10); // Return unique keywords, max 10
 }
+
+
+// Generate PDF report endpoint (Pro feature)
+router.get('/pdf-report/:fileId', authenticateToken, requireProSubscription, async (req, res) => {
+  try {
+    console.log('PDF generation request received for fileId:', req.params.fileId);
+    console.log('User:', req.user ? req.user.email : 'No user');
+    console.log('User tier:', req.user ? req.user.tier : 'No tier');
+
+    const { fileId } = req.params;
+    const user = req.user;
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Find the scan in user's history
+    const scan = user.scanHistory?.find(s => s.fileId === fileId);
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: 'Scan not found'
+      });
+    }
+
+    // Check if analysis results exist
+    if (!scan.analysisResults) {
+      return res.status(400).json({
+        success: false,
+        message: 'No analysis results found. Please analyze the resume first.'
+      });
+    }
+
+    // Only allow PDF generation for Pro analysis
+    if (scan.analysisResults.analysisType !== 'pro') {
+      return res.status(400).json({
+        success: false,
+        message: 'PDF reports are only available for Pro analysis'
+      });
+    }
+
+    console.log('Generating PDF report for scan:', fileId);
+
+    // Prepare data for PDF generation
+    const reportData = {
+      fileName: scan.originalName,
+      jobDescription: scan.analysisResults.jobMatch?.jobDescription || '',
+      overallScore: scan.analysisResults.score || 0,
+      jobMatchScore: scan.analysisResults.jobMatch?.overallMatch || 0,
+      analysisDate: scan.analysisResults.timestamp || scan.createdAt,
+      keywordAnalysis: scan.analysisResults.jobMatch?.keywordAnalysis || {
+        matched: scan.analysisResults.jobMatch?.strongMatches || [],
+        missing: scan.analysisResults.jobMatch?.missingSkills || []
+      },
+      skillsGap: scan.analysisResults.jobMatch?.skillsGap || {
+        missing: scan.analysisResults.jobMatch?.missingSkills || []
+      },
+      sectionAnalysis: scan.analysisResults.jobMatch?.sectionAnalysis || {},
+      atsCompatibility: scan.analysisResults.jobMatch?.atsCompatibility || { score: 85 },
+      recommendations: scan.analysisResults.jobMatch?.recommendations || scan.analysisResults.feedback || [],
+      strengths: scan.analysisResults.strengths || [],
+      criticalIssues: scan.analysisResults.criticalIssues || []
+    };
+
+    // Generate PDF
+    const pdfBuffer = await generateProReportPDF(reportData);
+    console.log('Generated PDF buffer size:', pdfBuffer.length, 'bytes');
+
+    // Verify the buffer is valid
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('Generated PDF buffer is empty');
+    }
+
+    // Create temporary file for download
+    const tempDir = path.join(__dirname, '../temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const fileName = `resume-analysis-${scan.originalName.replace(/\.[^/.]+$/, '')}-${Date.now()}.pdf`;
+    const tempFilePath = path.join(tempDir, fileName);
+
+    // Write PDF to temporary file
+    fs.writeFileSync(tempFilePath, pdfBuffer);
+
+    // Send file using res.download (this bypasses middleware issues)
+    res.download(tempFilePath, fileName, (err) => {
+      // Clean up temporary file after download
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+
+      if (err) {
+        console.error('Download error:', err);
+      } else {
+        console.log('PDF downloaded successfully:', fileName);
+      }
+    });
+
+    console.log('PDF report generated successfully:', fileName);
+
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    console.error('Error stack:', error.stack);
+
+    // Make sure we return JSON error response
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'Failed to generate PDF report',
+        error: error.message
+      });
+    }
+  }
+});
 
 export default router;

@@ -121,9 +121,12 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Ensure JSON responses
+// Ensure JSON responses (except for PDF downloads)
 app.use('/api', (req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
+  // Skip setting JSON content type for PDF endpoints
+  if (!req.path.includes('/pdf')) {
+    res.setHeader('Content-Type', 'application/json');
+  }
   next();
 });
 
@@ -138,8 +141,6 @@ app.use(session({
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
-
-app.use(express.static(path.join(__dirname, '../dist')));
 
 // Stripe webhook needs raw body, so it must come before express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -181,6 +182,9 @@ app.use('/api/resume', resumeRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api', dashboardRoutes);
+
+// Serve static files AFTER API routes
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // Global error handler for API routes
 app.use('/api', (err, req, res, next) => {

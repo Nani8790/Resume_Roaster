@@ -135,29 +135,52 @@ const ProAnalysisResults = ({ scanData }) => {
     }
   };
 
-  const downloadProReport = () => {
-    const reportData = {
-      fileName: actualFileName,
-      jobDescription: actualJobDescription,
-      overallScore: results.score,
-      jobMatchScore: results.jobMatch?.overallMatch,
-      analysisDate: new Date(results.timestamp).toLocaleDateString(),
-      keywordAnalysis: results.jobMatch?.keywordAnalysis,
-      skillsGap: results.jobMatch?.skillsGap,
-      sectionAnalysis: results.jobMatch?.sectionAnalysis,
-      atsCompatibility: results.jobMatch?.atsCompatibility,
-      recommendations: results.aiAnalysis?.recommendations || [],
-      strengths: results.strengths || [],
-      criticalIssues: results.criticalIssues || []
-    };
-    
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `pro-resume-analysis-${actualFileName}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+  const downloadProReport = async () => {
+    try {
+      console.log('Downloading PDF for fileId:', actualFileId);
+      const response = await fetch(`/api/resume/pdf-report/${actualFileId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      if (!response.ok) {
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+        
+        // Check if response is JSON or HTML
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to generate PDF report');
+        } else {
+          // If it's HTML, it might be a 404 or server error page
+          const htmlText = await response.text();
+          console.log('HTML response:', htmlText.substring(0, 200));
+          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+      }
+
+      // Get the PDF blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `resume-analysis-${actualFileName.replace(/\.[^/.]+$/, '')}-${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      console.error('PDF download error:', error);
+      alert('Failed to generate PDF report. Please try again.');
+    }
   };
 
   // Helper function to create circular progress data
