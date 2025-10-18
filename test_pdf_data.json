@@ -1,0 +1,33 @@
+{
+  "fileName": "test-resume.pdf",
+  "jobDescription": "Software Engineer position requiring React, Node.js, and Python skills",
+  "overallScore": 85,
+  "jobMatchScore": 78,
+  "analysisDate": "2024-01-15T10:30:00Z",
+  "keywordAnalysis": {
+    "matched": ["JavaScript", "React", "Node.js", "Git"],
+    "missing": ["Python", "AWS", "Docker"]
+  },
+  "skillsGap": {
+    "missing": ["Python", "AWS", "Docker", "Kubernetes"]
+  },
+  "sectionAnalysis": {},
+  "atsCompatibility": {
+    "score": 85
+  },
+  "recommendations": [
+    "Add Python programming experience to your skills section",
+    "Include AWS or cloud computing experience if applicable",
+    "Mention Docker containerization experience",
+    "Quantify your achievements with specific metrics"
+  ],
+  "strengths": [
+    "Strong JavaScript and React experience",
+    "Good project management skills",
+    "Excellent communication abilities"
+  ],
+  "criticalIssues": [
+    "Missing key technical skills mentioned in job posting",
+    "Lack of cloud computing experience"
+  ]
+}

@@ -141,8 +141,23 @@ Provide analysis in JSON format:
       "score": <0-100>,
       "missing_from_job": ["list"],
       "irrelevant_skills": ["list"]
+    },
+    "projects": {
+      "score": <0-100>,
+      "issues": ["list of issues with current projects section"],
+      "recommendations": ["specific project suggestions"]
     }
   },
+  "project_recommendations": [
+    {
+      "title": "Project name",
+      "description": "Brief description of what to build",
+      "skills": ["list of skills this project demonstrates"],
+      "difficulty": "Beginner|Intermediate|Advanced",
+      "timeEstimate": "estimated time to complete",
+      "priority": "high|medium|low based on job requirements"
+    }
+  ],
   "ats_compatibility": {
     "likely_to_pass_ats": true/false,
     "confidence": "high|medium|low",
@@ -448,8 +463,14 @@ const generateFallbackAnalysis = (resumeText, analysisType, jobDescription = nul
           score: Math.max(60, 90 - (missingSkills.length * 15)),
           missing_from_job: missingSkills,
           irrelevant_skills: []
+        },
+        projects: {
+          score: text.includes('project') ? 70 : 45,
+          issues: text.includes('project') ? ["Limited project portfolio showcased"] : ["No projects section found"],
+          recommendations: ["Add 2-3 relevant projects that demonstrate job-specific skills"]
         }
       },
+      project_recommendations: generateProjectRecommendationsFromJob(jobDescription, missingSkills),
       ats_compatibility: {
         likely_to_pass_ats: missingSkills.length < 3,
         confidence: missingSkills.length < 2 ? "high" : "medium",
@@ -505,6 +526,62 @@ const generateJobSpecificSuggestions = (missingSkills, matchingSkills) => {
   }
   suggestions.push("Tailor your professional summary to highlight job-relevant experience");
   return suggestions;
+};
+
+const generateProjectRecommendationsFromJob = (jobDescription, missingSkills) => {
+  if (!jobDescription) return [];
+
+  const jobLower = jobDescription.toLowerCase();
+  const projects = [];
+
+  // Web Development Projects
+  if (jobLower.includes('react') || jobLower.includes('frontend') || missingSkills.includes('react')) {
+    projects.push({
+      title: 'E-commerce Dashboard',
+      description: 'Build a responsive admin dashboard with React.js featuring product management, analytics, and user authentication.',
+      skills: ['React.js', 'JavaScript', 'CSS3', 'REST APIs', 'Redux'],
+      difficulty: 'Intermediate',
+      timeEstimate: '2-3 weeks',
+      priority: missingSkills.includes('react') ? 'high' : 'medium'
+    });
+  }
+
+  if (jobLower.includes('node') || jobLower.includes('backend') || missingSkills.includes('node')) {
+    projects.push({
+      title: 'Task Management API',
+      description: 'Create a RESTful API with Node.js and Express for task management with user authentication and real-time updates.',
+      skills: ['Node.js', 'Express.js', 'MongoDB', 'Socket.io', 'JWT'],
+      difficulty: 'Intermediate',
+      timeEstimate: '3-4 weeks',
+      priority: missingSkills.includes('node') ? 'high' : 'medium'
+    });
+  }
+
+  // Data Science Projects
+  if (jobLower.includes('python') || jobLower.includes('data') || missingSkills.includes('python')) {
+    projects.push({
+      title: 'Sales Prediction Model',
+      description: 'Develop a machine learning model to predict sales trends using Python, pandas, and scikit-learn with interactive visualizations.',
+      skills: ['Python', 'Pandas', 'Scikit-learn', 'Matplotlib', 'Jupyter'],
+      difficulty: 'Advanced',
+      timeEstimate: '4-5 weeks',
+      priority: missingSkills.includes('python') ? 'high' : 'medium'
+    });
+  }
+
+  // Cloud Projects
+  if (jobLower.includes('aws') || jobLower.includes('cloud') || missingSkills.includes('aws')) {
+    projects.push({
+      title: 'Serverless Web Application',
+      description: 'Deploy a full-stack application using AWS Lambda, API Gateway, and DynamoDB with CI/CD pipeline.',
+      skills: ['AWS Lambda', 'API Gateway', 'DynamoDB', 'CloudFormation', 'CI/CD'],
+      difficulty: 'Advanced',
+      timeEstimate: '3-4 weeks',
+      priority: missingSkills.includes('aws') ? 'high' : 'medium'
+    });
+  }
+
+  return projects.slice(0, 3);
 };
 
 // Helper function to detect summary section more accurately

@@ -809,9 +809,160 @@ const ProAnalysisResults = ({ scanData }) => {
                   </div>
                 )}
               </div>
+
+              {/* Projects */}
+              <div className="border border-gray-200 rounded-lg">
+                <button
+                  onClick={() => toggleSection('projects')}
+                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 rounded-lg"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="text-lg">🚀</span>
+                    <span className="font-medium text-gray-900">Projects</span>
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${
+                      results.jobMatch?.sectionAnalysis?.projects?.score >= 80 ? 'bg-green-100 text-green-800' :
+                      results.jobMatch?.sectionAnalysis?.projects?.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      Score: {results.jobMatch?.sectionAnalysis?.projects?.score || 65}/100
+                    </span>
+                  </div>
+                  {expandedSections.projects ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </button>
+                {expandedSections.projects && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <div className="space-y-4 mt-3">
+                      {/* Current Projects Analysis */}
+                      <div className="space-y-3">
+                        <div className="flex items-start space-x-2">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                          <span className="text-sm text-gray-700">Limited project portfolio showcased</span>
+                        </div>
+                        <div className="flex items-start space-x-2">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5" />
+                          <span className="text-sm text-gray-700">Missing job-specific project examples</span>
+                        </div>
+                      </div>
+
+                      {/* Project Recommendations */}
+                      {results.jobMatch?.projectRecommendations && results.jobMatch.projectRecommendations.length > 0 && (
+                        <div className="bg-purple-50 p-4 rounded-lg">
+                          <div className="text-sm font-medium text-purple-900 mb-3">🎯 Recommended Projects to Build:</div>
+                          <div className="space-y-3">
+                            {results.jobMatch.projectRecommendations.slice(0, 3).map((project, index) => (
+                              <div key={index} className="bg-white p-3 rounded-lg border border-purple-200">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h5 className="font-semibold text-purple-900 text-sm">{project.title}</h5>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    project.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                    {project.priority === 'high' ? 'High Priority' : 'Medium Priority'}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-600 mb-2">{project.description}</p>
+                                <div className="flex flex-wrap gap-1 mb-2">
+                                  {project.skills.slice(0, 4).map((skill, skillIndex) => (
+                                    <span key={skillIndex} className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
+                                      {skill}
+                                    </span>
+                                  ))}
+                                  {project.skills.length > 4 && (
+                                    <span className="text-xs text-gray-500">+{project.skills.length - 4} more</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-gray-500">
+                                  <span>⏱️ {project.timeEstimate}</span>
+                                  <span>📊 {project.difficulty}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-blue-50 p-3 rounded-lg mt-3">
+                        <div className="text-sm font-medium text-blue-900 mb-1">→ Actionable Fix:</div>
+                        <div className="text-sm text-blue-800">
+                          Add 2-3 relevant projects that demonstrate skills mentioned in the job description. Include GitHub links and live demos where possible.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          {/* 6. Before & After Examples */}
+          {/* 6. Project Recommendations (Job-specific only) */}
+          {actualJobDescription && results.jobMatch?.projectRecommendations && results.jobMatch.projectRecommendations.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                <Target className="h-6 w-6 text-purple-600 mr-2" />
+                Recommended Projects to Build
+              </h3>
+              
+              <div className="mb-4 p-4 bg-purple-50 rounded-lg">
+                <p className="text-purple-800 text-sm">
+                  Based on the job description, here are specific projects you should build to strengthen your application and demonstrate relevant skills.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {results.jobMatch.projectRecommendations.map((project, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <h4 className="font-semibold text-gray-900">{project.title}</h4>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        project.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {project.priority === 'high' ? '🔥 High Priority' : '⭐ Medium Priority'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-gray-600 text-sm mb-4">{project.description}</p>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <div className="text-xs font-medium text-gray-700 mb-2">Key Skills to Demonstrate:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {project.skills.map((skill, skillIndex) => (
+                            <span key={skillIndex} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
+                        <div className="flex items-center space-x-3">
+                          <span className="flex items-center">
+                            <span className="mr-1">⏱️</span>
+                            {project.timeEstimate}
+                          </span>
+                          <span className="flex items-center">
+                            <span className="mr-1">📊</span>
+                            {project.difficulty}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-2">💡 Pro Tips for Project Building:</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Start with the highest priority project that matches your current skill level</li>
+                  <li>• Document your process and challenges faced in a README file</li>
+                  <li>• Deploy your projects live and include links in your resume</li>
+                  <li>• Use version control (Git) and maintain clean, commented code</li>
+                  <li>• Consider contributing to open-source projects in the same domain</li>
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* 7. Before & After Examples */}
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900 flex items-center">
@@ -903,7 +1054,7 @@ const ProAnalysisResults = ({ scanData }) => {
             )}
           </div>
 
-          {/* 7. Action Buttons */}
+          {/* 8. Action Buttons */}
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl shadow-lg p-8 text-white">
             <div className="text-center mb-6">
               <Crown className="h-12 w-12 mx-auto mb-3 text-yellow-300" />

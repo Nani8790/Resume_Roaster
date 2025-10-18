@@ -508,7 +508,8 @@ router.post('/analyze', authenticateToken, async (req, res) => {
               summary: aiAnalysis.section_analysis?.summary ? getScoreLabel(aiAnalysis.section_analysis.summary.score) : 'Good match',
               experience: aiAnalysis.section_analysis?.experience ? getScoreLabel(aiAnalysis.section_analysis.experience.score) : 'Good match',
               skills: aiAnalysis.section_analysis?.skills ? getScoreLabel(aiAnalysis.section_analysis.skills.score) : getMatchLabel(aiAnalysis.skills_match_score),
-              education: 'Good'
+              education: 'Good',
+              projects: aiAnalysis.section_analysis?.projects ? getScoreLabel(aiAnalysis.section_analysis.projects.score) : 'Needs improvement'
             }
           },
           jobMatch: {
@@ -523,7 +524,8 @@ router.post('/analyze', authenticateToken, async (req, res) => {
             keywordAnalysis: aiAnalysis.keyword_analysis,
             skillsGap: aiAnalysis.skills_gap,
             sectionAnalysis: aiAnalysis.section_analysis,
-            atsCompatibility: aiAnalysis.ats_compatibility
+            atsCompatibility: aiAnalysis.ats_compatibility,
+            projectRecommendations: aiAnalysis.project_recommendations || generateProjectRecommendations(jobDescription, aiAnalysis)
           },
           strengths: aiAnalysis.strengths || [],
           criticalIssues: aiAnalysis.critical_issues || [],
@@ -569,7 +571,8 @@ router.post('/analyze', authenticateToken, async (req, res) => {
               summary: isProAnalysis ? 'Good match' : 'Good',
               experience: isProAnalysis ? 'Strong match' : 'Needs improvement',
               skills: isProAnalysis ? 'Partial match' : 'Fair',
-              education: 'Good'
+              education: 'Good',
+              projects: isProAnalysis ? 'Needs improvement' : 'Fair'
             }
           },
           jobMatch: isProAnalysis ? {
@@ -585,7 +588,8 @@ router.post('/analyze', authenticateToken, async (req, res) => {
               'Mention AWS or cloud computing experience if applicable',
               'Quantify your leadership achievements with team sizes and outcomes'
             ],
-            jobDescription: jobDescription
+            jobDescription: jobDescription,
+            projectRecommendations: generateProjectRecommendations(jobDescription, { missing_skills: ['Python', 'Machine Learning', 'AWS'] })
           } : null,
           fallback: true, // Indicate this is fallback data
           aiPowered: false
@@ -662,6 +666,92 @@ function extractKeywordsFromAIAnalysis(aiAnalysis) {
   }
 
   return [...new Set(keywords)].slice(0, 10); // Return unique keywords, max 10
+}
+
+function generateProjectRecommendations(jobDescription, aiAnalysis) {
+  if (!jobDescription) {
+    return [];
+  }
+
+  const jobLower = jobDescription.toLowerCase();
+  const missingSkills = aiAnalysis.skills_gap?.technical_skills_missing || aiAnalysis.missing_skills || [];
+  const projects = [];
+
+  // Web Development Projects
+  if (jobLower.includes('react') || jobLower.includes('frontend') || jobLower.includes('javascript')) {
+    projects.push({
+      title: 'Interactive Dashboard Application',
+      description: 'Build a responsive dashboard using React.js with real-time data visualization, user authentication, and API integration.',
+      skills: ['React.js', 'JavaScript', 'CSS3', 'REST APIs', 'Chart.js'],
+      difficulty: 'Intermediate',
+      timeEstimate: '2-3 weeks',
+      priority: missingSkills.some(skill => ['react', 'javascript', 'frontend'].includes(skill.toLowerCase())) ? 'high' : 'medium'
+    });
+  }
+
+  if (jobLower.includes('node') || jobLower.includes('backend') || jobLower.includes('api')) {
+    projects.push({
+      title: 'RESTful API with Authentication',
+      description: 'Create a scalable Node.js API with JWT authentication, database integration, and comprehensive testing.',
+      skills: ['Node.js', 'Express.js', 'MongoDB', 'JWT', 'Jest'],
+      difficulty: 'Intermediate',
+      timeEstimate: '2-4 weeks',
+      priority: missingSkills.some(skill => ['node', 'backend', 'api'].includes(skill.toLowerCase())) ? 'high' : 'medium'
+    });
+  }
+
+  // Data Science Projects
+  if (jobLower.includes('python') || jobLower.includes('data') || jobLower.includes('machine learning')) {
+    projects.push({
+      title: 'Predictive Analytics Model',
+      description: 'Develop a machine learning model for data prediction using Python, pandas, and scikit-learn with data visualization.',
+      skills: ['Python', 'Pandas', 'Scikit-learn', 'Matplotlib', 'Jupyter'],
+      difficulty: 'Advanced',
+      timeEstimate: '3-5 weeks',
+      priority: missingSkills.some(skill => ['python', 'machine learning', 'data analysis'].includes(skill.toLowerCase())) ? 'high' : 'medium'
+    });
+  }
+
+  // Cloud/DevOps Projects
+  if (jobLower.includes('aws') || jobLower.includes('cloud') || jobLower.includes('docker')) {
+    projects.push({
+      title: 'Cloud-Native Application Deployment',
+      description: 'Deploy a containerized application on AWS using Docker, implement CI/CD pipeline, and set up monitoring.',
+      skills: ['AWS', 'Docker', 'CI/CD', 'Kubernetes', 'Terraform'],
+      difficulty: 'Advanced',
+      timeEstimate: '3-4 weeks',
+      priority: missingSkills.some(skill => ['aws', 'docker', 'kubernetes'].includes(skill.toLowerCase())) ? 'high' : 'medium'
+    });
+  }
+
+  // Mobile Development Projects
+  if (jobLower.includes('mobile') || jobLower.includes('react native') || jobLower.includes('flutter')) {
+    projects.push({
+      title: 'Cross-Platform Mobile App',
+      description: 'Build a feature-rich mobile application with offline capabilities, push notifications, and native device integration.',
+      skills: ['React Native', 'Redux', 'Firebase', 'Push Notifications', 'AsyncStorage'],
+      difficulty: 'Intermediate',
+      timeEstimate: '4-6 weeks',
+      priority: missingSkills.some(skill => ['react native', 'mobile', 'flutter'].includes(skill.toLowerCase())) ? 'high' : 'medium'
+    });
+  }
+
+  // Database Projects
+  if (jobLower.includes('database') || jobLower.includes('sql') || jobLower.includes('postgresql')) {
+    projects.push({
+      title: 'Database Design and Optimization',
+      description: 'Design a normalized database schema, implement complex queries, and optimize performance for large datasets.',
+      skills: ['PostgreSQL', 'SQL', 'Database Design', 'Query Optimization', 'Indexing'],
+      difficulty: 'Intermediate',
+      timeEstimate: '2-3 weeks',
+      priority: missingSkills.some(skill => ['sql', 'database', 'postgresql'].includes(skill.toLowerCase())) ? 'high' : 'medium'
+    });
+  }
+
+  // Sort by priority (high first) and return top 4
+  return projects
+    .sort((a, b) => a.priority === 'high' && b.priority !== 'high' ? -1 : 1)
+    .slice(0, 4);
 }
 
 
