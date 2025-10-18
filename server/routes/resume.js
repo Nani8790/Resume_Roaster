@@ -265,7 +265,8 @@ router.post('/upload', authenticateToken, checkSubscriptionLimits, (req, res, ne
         success: true,
         message: 'Resume uploaded successfully',
         fileId,
-        extractedLength: extractedText.length
+        extractedLength: extractedText.length,
+        scanInfo: req.scanInfo || null
       });
 
     } catch (parseError) {
@@ -315,9 +316,51 @@ router.get('/history', authenticateToken, async (req, res) => {
       analysisResults: scan.analysisResults
     })) || [];
 
+    // Calculate scan usage
+    const now = new Date();
+    let scanInfo;
+
+    if (user.tier === 'pro') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const proScansThisMonth = user.scanHistory?.filter(scan => 
+        new Date(scan.createdAt) >= startOfMonth && 
+        scan.analysisResults?.analysisType === 'pro'
+      ).length || 0;
+
+      scanInfo = {
+        scansUsed: proScansThisMonth,
+        scansRemaining: 15 - proScansThisMonth,
+        tier: 'pro',
+        maxScans: 15,
+        resetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString()
+      };
+    } else {
+      const startOfWeek = new Date(now);
+      const day = startOfWeek.getUTCDay();
+      const diff = startOfWeek.getUTCDate() - day + (day === 0 ? -6 : 1);
+      startOfWeek.setUTCDate(diff);
+      startOfWeek.setUTCHours(0, 0, 0, 0);
+
+      const scansThisWeek = user.scanHistory?.filter(scan => 
+        new Date(scan.createdAt) >= startOfWeek
+      ).length || 0;
+
+      const nextWeek = new Date(startOfWeek);
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
+
+      scanInfo = {
+        scansUsed: scansThisWeek,
+        scansRemaining: 1 - scansThisWeek,
+        tier: 'free',
+        maxScans: 1,
+        resetDate: nextWeek.toISOString()
+      };
+    }
+
     res.json({
       success: true,
-      history
+      history,
+      scanInfo
     });
 
   } catch (error) {
@@ -325,6 +368,73 @@ router.get('/history', authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to fetch scan history'
+    });
+  }
+});
+
+// Get scan usage information
+router.get('/scan-usage', authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const now = new Date();
+    let scanInfo;
+
+    if (user.tier === 'pro') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const proScansThisMonth = user.scanHistory?.filter(scan => 
+        new Date(scan.createdAt) >= startOfMonth && 
+        scan.analysisResults?.analysisType === 'pro'
+      ).length || 0;
+
+      scanInfo = {
+        scansUsed: proScansThisMonth,
+        scansRemaining: 15 - proScansThisMonth,
+        tier: 'pro',
+        maxScans: 15,
+        resetDate: new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString(),
+        period: 'monthly'
+      };
+    } else {
+      const startOfWeek = new Date(now);
+      const day = startOfWeek.getUTCDay();
+      const diff = startOfWeek.getUTCDate() - day + (day === 0 ? -6 : 1);
+      startOfWeek.setUTCDate(diff);
+      startOfWeek.setUTCHours(0, 0, 0, 0);
+
+      const scansThisWeek = user.scanHistory?.filter(scan => 
+        new Date(scan.createdAt) >= startOfWeek
+      ).length || 0;
+
+      const nextWeek = new Date(startOfWeek);
+      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
+
+      scanInfo = {
+        scansUsed: scansThisWeek,
+        scansRemaining: 1 - scansThisWeek,
+        tier: 'free',
+        maxScans: 1,
+        resetDate: nextWeek.toISOString(),
+        period: 'weekly'
+      };
+    }
+
+    res.json({
+      success: true,
+      scanInfo
+    });
+
+  } catch (error) {
+    console.error('Scan usage fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch scan usage'
     });
   }
 });
@@ -441,6 +551,32 @@ router.post('/analyze', authenticateToken, async (req, res) => {
         code: 'PRO_REQUIRED',
         upgradeUrl: '/pricing'
       });
+    }
+
+    // Check Pro analysis limits (only for Pro analysis, quick analysis is unlimited)
+    if (analysisType === 'pro' && user.tier === 'pro') {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      const proScansThisMonth = user.scanHistory?.filter(scan => 
+        new Date(scan.createdAt) >= startOfMonth && 
+        scan.analysisResults?.analysisType === 'pro'
+      ).length || 0;
+
+      if (proScansThisMonth >= 15) {
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        
+        return res.status(429).json({
+          success: false,
+          message: 'Monthly Pro analysis limit reached (15 Pro analyses per month)',
+          code: 'PRO_SCAN_LIMIT_REACHED',
+          resetDate: nextMonth.toISOString(),
+          scansUsed: proScansThisMonth,
+          scansRemaining: 15 - proScansThisMonth,
+          tier: 'pro',
+          maxScans: 15
+        });
+      }
     }
 
     // Validate job description for Pro analysis

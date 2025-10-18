@@ -270,7 +270,7 @@ const ResumeUpload = () => {
               <Crown className="h-5 w-5 text-purple-600 mr-3" />
               <div>
                 <p className="text-sm font-semibold text-purple-900">
-                  Unlimited Scans
+                  15 Scans/Month
                 </p>
                 <p className="text-xs text-purple-700">
                   Pro Plan Active
@@ -470,7 +470,7 @@ const ResumeUpload = () => {
                   <div className="space-y-2 text-sm text-purple-800 mb-4">
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                      <span>Unlimited resume scans</span>
+                      <span>15 resume scans per month</span>
                     </div>
                     <div className="flex items-center">
                       <CheckCircle className="h-4 w-4 text-green-600 mr-2" />

@@ -271,7 +271,7 @@ const AnalysisType = () => {
             <div className="space-y-4 mb-8">
               <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-                <span className="text-gray-700">Unlimited resume scans</span>
+                <span className="text-gray-700">15 resume scans per month</span>
               </div>
               <div className="flex items-center">
                 <CheckCircle className="h-5 w-5 text-green-500 mr-3" />

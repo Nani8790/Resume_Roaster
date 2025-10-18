@@ -354,7 +354,7 @@ const Settings = () => {
                     <Crown className="h-6 w-6 text-yellow-500" />
                     <div>
                       <p className="font-medium text-gray-900">Pro Plan ($15/month)</p>
-                      <p className="text-sm text-gray-600">Unlimited scans and job-specific analysis</p>
+                      <p className="text-sm text-gray-600">15 Pro analyses per month + unlimited quick scans</p>
                     </div>
                   </div>
                 </div>
@@ -499,7 +499,7 @@ const Settings = () => {
                 <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
                   <h3 className="font-medium text-gray-900 mb-2">Upgrade to Pro - $15/month</h3>
                   <ul className="text-sm text-gray-600 space-y-1 mb-4">
-                    <li>• Unlimited resume scans</li>
+                    <li>• 15 Pro analyses per month + unlimited quick scans</li>
                     <li>• Job-specific analysis and optimization</li>
                     <li>• Advanced ATS compatibility checking</li>
                     <li>• Priority customer support</li>

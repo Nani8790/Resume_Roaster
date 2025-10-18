@@ -28,10 +28,12 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
       ? Math.round(scansWithScores.reduce((sum, scan) => sum + scan.analysisResults.score, 0) / scansWithScores.length)
       : 0;
 
-    // Get current week scan count for free users
+    // Get current period scan count
+    const now = new Date();
     let scansThisWeek = 0;
+    let scansThisMonth = 0;
+
     if (user.tier === 'free') {
-      const now = new Date();
       const startOfWeek = new Date(now);
       // Set to Monday 00:00 UTC
       const day = startOfWeek.getUTCDay();
@@ -42,16 +44,35 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
       scansThisWeek = scanHistory.filter(scan => 
         new Date(scan.createdAt) >= startOfWeek
       ).length;
+    } else if (user.tier === 'pro') {
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      startOfMonth.setHours(0, 0, 0, 0); // Ensure we start at beginning of day
+      
+      console.log('Debug - Start of month:', startOfMonth.toISOString());
+      console.log('Debug - Current date:', now.toISOString());
+      console.log('Debug - Total scan history length:', scanHistory.length);
+      
+      scansThisMonth = scanHistory.filter(scan => {
+        const scanDate = new Date(scan.createdAt);
+        const isThisMonth = scanDate >= startOfMonth;
+        const isProScan = scan.analysisResults?.analysisType === 'pro';
+        console.log(`Debug - Scan ${scan.fileId}: ${scanDate.toISOString()} >= ${startOfMonth.toISOString()} = ${isThisMonth}, analysisType: ${scan.analysisResults?.analysisType}, isProScan: ${isProScan}`);
+        return isThisMonth && isProScan;
+      }).length;
+      
+      console.log('Debug - PRO scans this month:', scansThisMonth);
     }
 
     res.json({
       success: true,
       stats: {
-        totalScans: user.tier === 'pro' ? 'Unlimited' : totalScans,
+        totalScans: totalScans,
         avgScore,
         currentTier: user.tier,
         scansThisWeek,
-        freeLimit: 1
+        scansThisMonth,
+        freeLimit: 1,
+        proLimit: 15
       }
     });
 

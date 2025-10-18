@@ -401,7 +401,7 @@ const FreeAnalysisResults = ({ scanData }) => {
                 </div>
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-300 flex-shrink-0" />
-                  <span className="text-sm">Unlimited resume scans</span>
+                  <span className="text-sm">15 resume scans per month</span>
                 </div>
                 <div className="flex items-center space-x-3">
                   <CheckCircle className="h-5 w-5 text-green-300 flex-shrink-0" />

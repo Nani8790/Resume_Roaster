@@ -38,7 +38,7 @@ const SubscriptionSuccess = () => {
         <div className="text-left space-y-2 mb-8">
           <div className="flex items-center space-x-2">
             <CheckCircle className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-gray-700">Unlimited resume scans</span>
+            <span className="text-sm text-gray-700">15 resume scans per month</span>
           </div>
           <div className="flex items-center space-x-2">
             <CheckCircle className="h-4 w-4 text-green-500" />

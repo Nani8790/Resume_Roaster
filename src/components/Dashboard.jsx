@@ -27,6 +27,15 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // Debug: Log stats data
+  useEffect(() => {
+    if (stats) {
+      console.log('Dashboard Stats:', stats);
+      console.log('User Tier:', user?.tier);
+      console.log('Scans This Month:', stats.scansThisMonth);
+    }
+  }, [stats, user]);
+
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -42,10 +51,14 @@ const Dashboard = () => {
 
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();
-        console.log('Stats data:', statsData);
+        console.log('✅ Stats API Response:', statsData);
+        console.log('📊 Stats Object:', statsData.stats);
+        console.log('🔢 Scans This Month:', statsData.stats?.scansThisMonth);
         setStats(statsData.stats);
       } else {
-        console.error('Failed to fetch stats:', statsResponse.status, statsResponse.statusText);
+        console.error('❌ Failed to fetch stats:', statsResponse.status, statsResponse.statusText);
+        const errorText = await statsResponse.text();
+        console.error('Error response:', errorText);
       }
 
       // Fetch recent scans
@@ -134,12 +147,26 @@ const Dashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            Welcome back, {user?.name}! 👋
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Track your resume optimization progress and improve your ATS scores.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+                Welcome back, {user?.name}! 👋
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Track your resume optimization progress and improve your ATS scores.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                console.log('🔄 Manual refresh triggered');
+                setLoading(true);
+                fetchDashboardData();
+              }}
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors"
+            >
+              Refresh Data
+            </button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -189,8 +216,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Free User Reminder */}
-        {user?.tier === 'free' && (
+        {/* Scan Usage Display */}
+        {user?.tier === 'free' ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
             <div className="flex items-center">
               <AlertCircle className="h-5 w-5 text-blue-600 mr-3" />
@@ -199,7 +226,7 @@ const Dashboard = () => {
                   Free Scans Used This Week: {stats?.scansThisWeek || 0}/{stats?.freeLimit || 1}
                 </p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Upgrade to Pro for unlimited scans and job match analysis
+                  Upgrade to Pro for 15 scans/month and job match analysis
                 </p>
               </div>
               <button 
@@ -208,6 +235,29 @@ const Dashboard = () => {
               >
                 Upgrade
               </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-8">
+            <div className="flex items-center">
+              <Crown className="h-5 w-5 text-purple-600 mr-3" />
+              <div className="flex-1">
+                <p className="text-sm text-purple-800">
+                  Pro Analysis Used This Month: {stats?.scansThisMonth ?? 'Loading...'}/15
+                </p>
+                <p className="text-xs text-purple-600 mt-1">
+                  {stats?.scansThisMonth !== undefined ? `${15 - stats.scansThisMonth} Pro analyses remaining this month` : 'Loading scan data...'}
+                </p>
+                <p className="text-xs text-purple-500 mt-1">
+                  Quick scans are unlimited for Pro users
+                </p>
+              </div>
+              <div className="w-32 bg-purple-200 rounded-full h-2">
+                <div 
+                  className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(((stats?.scansThisMonth || 0) / 15) * 100, 100)}%` }}
+                ></div>
+              </div>
             </div>
           </div>
         )}

@@ -64,13 +64,44 @@ export const checkSubscriptionLimits = async (req, res, next) => {
       });
     }
 
-    // Pro users have unlimited access
+    const now = new Date();
+
     if (user.tier === 'pro') {
+      // Pro users have 15 PRO scans per month (quick scans are unlimited)
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      
+      const proScansThisMonth = user.scanHistory?.filter(scan => 
+        new Date(scan.createdAt) >= startOfMonth && 
+        scan.analysisResults?.analysisType === 'pro'
+      ).length || 0;
+
+      if (proScansThisMonth >= 15) {
+        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        
+        return res.status(429).json({
+          success: false,
+          message: 'Monthly Pro analysis limit reached (15 Pro scans)',
+          code: 'SCAN_LIMIT_REACHED',
+          resetDate: nextMonth.toISOString(),
+          scansUsed: proScansThisMonth,
+          scansRemaining: 15 - proScansThisMonth,
+          tier: 'pro',
+          maxScans: 15
+        });
+      }
+
+      // Add scan count info to response for Pro users
+      req.scanInfo = {
+        scansUsed: proScansThisMonth,
+        scansRemaining: 15 - proScansThisMonth,
+        tier: 'pro',
+        maxScans: 15
+      };
+
       return next();
     }
 
     // Check free tier limits (1 scan per week)
-    const now = new Date();
     const startOfWeek = new Date(now);
     // Set to Monday 00:00 UTC
     const day = startOfWeek.getUTCDay();
@@ -94,9 +125,18 @@ export const checkSubscriptionLimits = async (req, res, next) => {
         resetDate: nextWeek.toISOString(),
         scansUsed: scansThisWeek,
         scansRemaining: 0,
-        tier: 'free'
+        tier: 'free',
+        maxScans: 1
       });
     }
+
+    // Add scan count info to response for Free users
+    req.scanInfo = {
+      scansUsed: scansThisWeek,
+      scansRemaining: 1 - scansThisWeek,
+      tier: 'free',
+      maxScans: 1
+    };
 
     next();
   } catch (error) {

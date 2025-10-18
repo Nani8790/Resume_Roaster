@@ -63,7 +63,7 @@ const Pricing = () => {
       period: "per month",
       description: "For serious job seekers",
       features: [
-        "Unlimited scans",
+        "15 Pro analyses/month + unlimited quick scans",
         "Advanced job matching",
         "Keyword optimizer",
         "PDF reports",

@@ -101,7 +101,7 @@ const AnalysisResults = () => {
         console.error('Analysis failed:', response.status, errorData);
 
         if (response.status === 429) {
-          setError(errorData.message || 'Analysis limit reached. Please upgrade to Pro for unlimited analyses.');
+          setError(errorData.message || 'Analysis limit reached. Please upgrade to Pro for 15 analyses per month.');
         } else if (response.status === 403) {
           setError(errorData.message || 'Pro subscription required for this analysis type.');
         } else {
