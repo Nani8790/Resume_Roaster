@@ -441,7 +441,7 @@ const ResumeUpload = () => {
                 </h3>
 
                 <p className="text-sm text-gray-500 mb-6">
-                  Free users get 1 scan per week. Your limit resets every Monday at 12:00 AM UTC.
+                  Free users get 3 quick scans + 2 Pro analyses per week. Limits reset every Monday at 12:00 AM UTC.
                 </p>
 
                 {limits.resetDate && (
@@ -487,7 +487,7 @@ const ResumeUpload = () => {
                   </div>
 
                   <p className="text-lg font-bold text-purple-900">
-                    Only $15/month
+                    Only $10/month
                   </p>
                 </div>
 

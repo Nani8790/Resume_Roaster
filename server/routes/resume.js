@@ -520,7 +520,7 @@ router.get('/scans/:id', authenticateToken, async (req, res) => {
 });
 
 // Analyze resume endpoint
-router.post('/analyze', authenticateToken, async (req, res) => {
+router.post('/analyze', authenticateToken, checkSubscriptionLimits, async (req, res) => {
   try {
     const { fileId, analysisType, jobDescription } = req.body;
     const user = req.user;
@@ -531,8 +531,6 @@ router.post('/analyze', authenticateToken, async (req, res) => {
         message: 'User not found'
       });
     }
-
-
 
     // Find the scan in user's history
     const scan = user.scanHistory?.find(s => s.fileId === fileId);
@@ -553,31 +551,7 @@ router.post('/analyze', authenticateToken, async (req, res) => {
       });
     }
 
-    // Check Pro analysis limits (only for Pro analysis, quick analysis is unlimited)
-    if (analysisType === 'pro' && user.tier === 'pro') {
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
-      const proScansThisMonth = user.scanHistory?.filter(scan => 
-        new Date(scan.createdAt) >= startOfMonth && 
-        scan.analysisResults?.analysisType === 'pro'
-      ).length || 0;
-
-      if (proScansThisMonth >= 15) {
-        const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        
-        return res.status(429).json({
-          success: false,
-          message: 'Monthly Pro analysis limit reached (15 Pro analyses per month)',
-          code: 'PRO_SCAN_LIMIT_REACHED',
-          resetDate: nextMonth.toISOString(),
-          scansUsed: proScansThisMonth,
-          scansRemaining: 15 - proScansThisMonth,
-          tier: 'pro',
-          maxScans: 15
-        });
-      }
-    }
+    // Subscription limits are now checked by middleware
 
     // Validate job description for Pro analysis
     if (analysisType === 'pro' && (!jobDescription || jobDescription.length < 100)) {
@@ -736,8 +710,9 @@ router.post('/analyze', authenticateToken, async (req, res) => {
       }
     }
 
-    // Update scan with analysis results
+    // Update scan with analysis results and track tier at time of analysis
     scan.analysisResults = analysisResults;
+    scan.tierAtTime = user.tier;
     await user.save();
 
     res.json({

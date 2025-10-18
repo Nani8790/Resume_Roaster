@@ -122,6 +122,14 @@ const testCurrentProLogic = () => {
   console.log('  ✅ Previous month Pro analyses don\'t count');
   console.log('  ✅ Cost control on expensive Pro analyses only');
   
+  console.log('\n💰 Updated Pricing Analysis ($10/month):');
+  console.log('  Pro Analysis Cost: ~$0.20-0.40 each (OpenAI + processing)');
+  console.log('  Quick Analysis Cost: ~$0.05-0.10 each (simpler processing)');
+  console.log('  Max Monthly Cost: 15 × $0.40 = $6.00 for Pro analyses');
+  console.log('  Revenue: $10/month (reduced from $15)');
+  console.log('  Profit Margin: ~40-80% (still profitable with unlimited quick scans)');
+  console.log('  Better conversion rate expected with lower price point');
+  
   return {
     proScansThisMonth: scansThisMonth,
     quickScansThisMonth,

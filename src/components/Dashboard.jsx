@@ -222,11 +222,16 @@ const Dashboard = () => {
             <div className="flex items-center">
               <AlertCircle className="h-5 w-5 text-blue-600 mr-3" />
               <div className="flex-1">
-                <p className="text-sm text-blue-800">
-                  Free Scans Used This Week: {stats?.scansThisWeek || 0}/{stats?.freeLimit || 1}
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  Upgrade to Pro for 15 scans/month and job match analysis
+                <div className="space-y-1">
+                  <p className="text-sm text-blue-800">
+                    Quick Scans This Week: {stats?.scansThisWeek?.quick || 0}/3
+                  </p>
+                  <p className="text-sm text-blue-800">
+                    Pro Scans This Week: {stats?.scansThisWeek?.pro || 0}/2
+                  </p>
+                </div>
+                <p className="text-xs text-blue-600 mt-2">
+                  Upgrade to Pro for unlimited quick scans + 15 Pro analyses/month + unused free Pro scans carry over!
                 </p>
               </div>
               <button 
@@ -242,20 +247,41 @@ const Dashboard = () => {
             <div className="flex items-center">
               <Crown className="h-5 w-5 text-purple-600 mr-3" />
               <div className="flex-1">
-                <p className="text-sm text-purple-800">
-                  Pro Analysis Used This Month: {stats?.scansThisMonth ?? 'Loading...'}/15
-                </p>
-                <p className="text-xs text-purple-600 mt-1">
-                  {stats?.scansThisMonth !== undefined ? `${15 - stats.scansThisMonth} Pro analyses remaining this month` : 'Loading scan data...'}
-                </p>
-                <p className="text-xs text-purple-500 mt-1">
-                  Quick scans are unlimited for Pro users
-                </p>
+                {(() => {
+                  const scansData = stats?.scansThisMonth;
+                  const proLimit = stats?.proLimit || 15;
+                  
+                  // Handle both old format (number) and new format (object)
+                  const usedScans = typeof scansData === 'object' ? scansData.used : (scansData || 0);
+                  const bonusScans = typeof scansData === 'object' ? scansData.bonusScans : 0;
+                  const totalLimit = typeof scansData === 'object' ? scansData.totalLimit : proLimit;
+                  
+                  return (
+                    <>
+                      <p className="text-sm text-purple-800">
+                        Pro Analysis Used This Month: {usedScans ?? 'Loading...'}/{totalLimit}
+                      </p>
+                      <p className="text-xs text-purple-600 mt-1">
+                        {usedScans !== undefined ? `${totalLimit - usedScans} Pro analyses remaining this month` : 'Loading scan data...'}
+                      </p>
+                      {bonusScans > 0 && (
+                        <p className="text-xs text-green-600 mt-1">
+                          🎁 Upgrade bonus: +{bonusScans} Pro scans this month!
+                        </p>
+                      )}
+                      <p className="text-xs text-purple-500 mt-1">
+                        Quick scans are unlimited for Pro users
+                      </p>
+                    </>
+                  );
+                })()}
               </div>
               <div className="w-32 bg-purple-200 rounded-full h-2">
                 <div 
                   className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(((stats?.scansThisMonth || 0) / 15) * 100, 100)}%` }}
+                  style={{ 
+                    width: `${Math.min(((typeof stats?.scansThisMonth === 'object' ? stats.scansThisMonth.used : stats?.scansThisMonth || 0) / (stats?.proLimit || 15)) * 100, 100)}%` 
+                  }}
                 ></div>
               </div>
             </div>

@@ -128,8 +128,15 @@ const handleCheckoutCompleted = async (session) => {
     // Update user to pro tier
     const user = await User.findById(userId);
     if (user) {
+      const wasFreeTier = user.tier === 'free';
       user.tier = 'pro';
       user.stripe_customer_id = customerId;
+      
+      // Set upgrade date if upgrading from free
+      if (wasFreeTier) {
+        user.upgradeDate = new Date();
+      }
+      
       await user.save();
     }
 

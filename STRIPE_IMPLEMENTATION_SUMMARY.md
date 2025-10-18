@@ -12,7 +12,7 @@ The Stripe integration for Resume Roaster has been **fully implemented** and is 
   - `STRIPE_SECRET_KEY` - Server-side Stripe secret key
   - `STRIPE_PUBLISHABLE_KEY` - Client-side Stripe publishable key  
   - `STRIPE_WEBHOOK_SECRET` - Webhook signature verification
-  - `STRIPE_PRICE_ID` - Product price ID for $15/month subscription
+  - `STRIPE_PRICE_ID` - Product price ID for $10/month subscription
 - [x] **Product setup instructions** - Complete guide in STRIPE_SETUP.md
 
 ### 2. ✅ Create Checkout Endpoint
@@ -196,7 +196,7 @@ src/
 ## 📈 Business Impact
 
 ### Revenue Generation
-- **Subscription Model**: $15/month recurring revenue
+- **Subscription Model**: $10/month recurring revenue
 - **Conversion Funnel**: Free → Pro upgrade path
 - **Customer Retention**: Stripe Customer Portal for self-service
 

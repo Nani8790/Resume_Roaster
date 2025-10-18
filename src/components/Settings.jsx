@@ -353,7 +353,7 @@ const Settings = () => {
                   <div className="flex items-center space-x-3">
                     <Crown className="h-6 w-6 text-yellow-500" />
                     <div>
-                      <p className="font-medium text-gray-900">Pro Plan ($15/month)</p>
+                      <p className="font-medium text-gray-900">Pro Plan ($10/month)</p>
                       <p className="text-sm text-gray-600">15 Pro analyses per month + unlimited quick scans</p>
                     </div>
                   </div>
@@ -491,13 +491,13 @@ const Settings = () => {
                     <Crown className="h-6 w-6 text-gray-400" />
                     <div>
                       <p className="font-medium text-gray-900">Free Plan</p>
-                      <p className="text-sm text-gray-600">1 scan per week with basic analysis</p>
+                      <p className="text-sm text-gray-600">3 quick scans + 2 Pro analyses per week</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                  <h3 className="font-medium text-gray-900 mb-2">Upgrade to Pro - $15/month</h3>
+                  <h3 className="font-medium text-gray-900 mb-2">Upgrade to Pro - $10/month</h3>
                   <ul className="text-sm text-gray-600 space-y-1 mb-4">
                     <li>• 15 Pro analyses per month + unlimited quick scans</li>
                     <li>• Job-specific analysis and optimization</li>
@@ -509,7 +509,7 @@ const Settings = () => {
                     onClick={() => navigate('/pricing')}
                     className="bg-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
                   >
-                    Upgrade to Pro - $15/month
+                    Upgrade to Pro - $10/month
                   </button>
                 </div>
               </div>

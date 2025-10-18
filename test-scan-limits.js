@@ -57,7 +57,7 @@ const testScanLimits = () => {
   
   console.log('\n🎯 Pricing Strategy:');
   console.log('  Free: 1 scan/week (4 scans/month)');
-  console.log('  Pro: 15 scans/month ($15/month)');
+  console.log('  Pro: 15 scans/month ($10/month)');
   console.log('  Cost per scan: ~$1 for Pro users');
   console.log('  OpenAI cost: ~$0.10-0.30 per analysis');
   console.log('  Profit margin: ~70-90% per scan');

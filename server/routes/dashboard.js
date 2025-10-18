@@ -41,9 +41,18 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
       startOfWeek.setUTCDate(diff);
       startOfWeek.setUTCHours(0, 0, 0, 0);
 
-      scansThisWeek = scanHistory.filter(scan => 
-        new Date(scan.createdAt) >= startOfWeek
+      // Count quick and Pro scans separately for free users
+      const quickScansThisWeek = scanHistory.filter(scan => 
+        new Date(scan.createdAt) >= startOfWeek && 
+        scan.analysisResults?.analysisType === 'quick'
       ).length;
+
+      const proScansThisWeek = scanHistory.filter(scan => 
+        new Date(scan.createdAt) >= startOfWeek && 
+        scan.analysisResults?.analysisType === 'pro'
+      ).length;
+
+      scansThisWeek = { quick: quickScansThisWeek, pro: proScansThisWeek };
     } else if (user.tier === 'pro') {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       startOfMonth.setHours(0, 0, 0, 0); // Ensure we start at beginning of day
@@ -60,7 +69,37 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
         return isThisMonth && isProScan;
       }).length;
       
+      // Calculate upgrade bonus
+      let bonusScans = 0;
+      if (user.upgradeDate) {
+        const upgradeDate = new Date(user.upgradeDate);
+        const upgradeInCurrentMonth = upgradeDate >= startOfMonth;
+        
+        if (upgradeInCurrentMonth) {
+          const weeksInMonth = Math.ceil((new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()) / 7);
+          const weekOfUpgrade = Math.ceil(upgradeDate.getDate() / 7);
+          const remainingWeeks = weeksInMonth - weekOfUpgrade + 1;
+          bonusScans = remainingWeeks * 2;
+          
+          console.log('Debug - Upgrade bonus calculation:');
+          console.log(`  Upgrade date: ${upgradeDate.toISOString().split('T')[0]}`);
+          console.log(`  Weeks in month: ${weeksInMonth}`);
+          console.log(`  Week of upgrade: ${weekOfUpgrade}`);
+          console.log(`  Remaining weeks: ${remainingWeeks}`);
+          console.log(`  Bonus scans: ${bonusScans}`);
+        }
+      }
+      
       console.log('Debug - PRO scans this month:', scansThisMonth);
+      console.log('Debug - Bonus scans:', bonusScans);
+      console.log('Debug - Total Pro limit:', 15 + bonusScans);
+      
+      // Store bonus info for response
+      scansThisMonth = {
+        used: scansThisMonth,
+        bonusScans: bonusScans,
+        totalLimit: 15 + bonusScans
+      };
     }
 
     res.json({
@@ -71,8 +110,8 @@ router.get('/user/stats', authenticateToken, async (req, res) => {
         currentTier: user.tier,
         scansThisWeek,
         scansThisMonth,
-        freeLimit: 1,
-        proLimit: 15
+        freeLimits: { quick: 3, pro: 2 }, // New free tier limits
+        proLimit: user.tier === 'pro' && typeof scansThisMonth === 'object' ? scansThisMonth.totalLimit : 15
       }
     });
 

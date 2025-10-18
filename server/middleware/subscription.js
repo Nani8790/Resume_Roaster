@@ -53,9 +53,43 @@ export const requireProSubscription = async (req, res, next) => {
   }
 };
 
+// Helper function to calculate unused Pro scans from free tier
+const calculateUnusedFreeProScans = (user) => {
+  if (!user.upgradeDate) return 0; // No upgrade date means no unused scans
+  
+  const upgradeDate = new Date(user.upgradeDate);
+  const now = new Date();
+  
+  // Calculate weeks since upgrade in current month
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const upgradeInCurrentMonth = upgradeDate >= startOfMonth;
+  
+  if (!upgradeInCurrentMonth) return 0; // Upgrade was in previous month
+  
+  // Calculate how many weeks were left when user upgraded
+  const weeksInMonth = Math.ceil((new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()) / 7);
+  const weekOfUpgrade = Math.ceil(upgradeDate.getDate() / 7);
+  const remainingWeeks = weeksInMonth - weekOfUpgrade + 1;
+  
+  // Each week has 2 Pro scans for free users
+  const potentialFreeProScans = remainingWeeks * 2;
+  
+  // Count Pro scans used as free user after upgrade date
+  const proScansUsedAsFree = user.scanHistory?.filter(scan => {
+    const scanDate = new Date(scan.createdAt);
+    return scanDate >= upgradeDate && 
+           scanDate >= startOfMonth &&
+           scan.analysisResults?.analysisType === 'pro' &&
+           scan.tierAtTime === 'free'; // We'll need to track this
+  }).length || 0;
+  
+  return Math.max(0, potentialFreeProScans - proScansUsedAsFree);
+};
+
 export const checkSubscriptionLimits = async (req, res, next) => {
   try {
     const user = req.user;
+    const { analysisType } = req.body; // Get analysis type from request
     
     if (!user) {
       return res.status(401).json({
@@ -67,7 +101,18 @@ export const checkSubscriptionLimits = async (req, res, next) => {
     const now = new Date();
 
     if (user.tier === 'pro') {
-      // Pro users have 15 PRO scans per month (quick scans are unlimited)
+      // Pro users: Unlimited quick scans, 15 Pro scans/month + unused free Pro scans
+      if (analysisType === 'quick') {
+        // Quick scans are unlimited for Pro users
+        req.scanInfo = {
+          analysisType: 'quick',
+          unlimited: true,
+          tier: 'pro'
+        };
+        return next();
+      }
+
+      // For Pro analysis, check monthly limits
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       
       const proScansThisMonth = user.scanHistory?.filter(scan => 
@@ -75,33 +120,42 @@ export const checkSubscriptionLimits = async (req, res, next) => {
         scan.analysisResults?.analysisType === 'pro'
       ).length || 0;
 
-      if (proScansThisMonth >= 15) {
+      // Calculate bonus scans from unused free tier Pro scans
+      const unusedFreeProScans = calculateUnusedFreeProScans(user);
+      const totalProLimit = 15 + unusedFreeProScans;
+
+      if (proScansThisMonth >= totalProLimit) {
         const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
         
         return res.status(429).json({
           success: false,
-          message: 'Monthly Pro analysis limit reached (15 Pro scans)',
+          message: `Monthly Pro analysis limit reached (${totalProLimit} Pro scans)`,
           code: 'SCAN_LIMIT_REACHED',
           resetDate: nextMonth.toISOString(),
           scansUsed: proScansThisMonth,
-          scansRemaining: 15 - proScansThisMonth,
+          scansRemaining: totalProLimit - proScansThisMonth,
           tier: 'pro',
-          maxScans: 15
+          maxScans: totalProLimit,
+          baseLimit: 15,
+          bonusScans: unusedFreeProScans
         });
       }
 
       // Add scan count info to response for Pro users
       req.scanInfo = {
         scansUsed: proScansThisMonth,
-        scansRemaining: 15 - proScansThisMonth,
+        scansRemaining: totalProLimit - proScansThisMonth,
         tier: 'pro',
-        maxScans: 15
+        maxScans: totalProLimit,
+        baseLimit: 15,
+        bonusScans: unusedFreeProScans,
+        analysisType: 'pro'
       };
 
       return next();
     }
 
-    // Check free tier limits (1 scan per week)
+    // Free tier limits: 3 quick scans + 2 Pro scans per week
     const startOfWeek = new Date(now);
     // Set to Monday 00:00 UTC
     const day = startOfWeek.getUTCDay();
@@ -109,34 +163,70 @@ export const checkSubscriptionLimits = async (req, res, next) => {
     startOfWeek.setUTCDate(diff);
     startOfWeek.setUTCHours(0, 0, 0, 0);
 
-    const scansThisWeek = user.scanHistory?.filter(scan => 
-      new Date(scan.createdAt) >= startOfWeek
+    const quickScansThisWeek = user.scanHistory?.filter(scan => 
+      new Date(scan.createdAt) >= startOfWeek && 
+      scan.analysisResults?.analysisType === 'quick'
     ).length || 0;
 
-    if (scansThisWeek >= 1) {
-      const nextWeek = new Date(startOfWeek);
-      nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
-      
-      return res.status(429).json({
-        success: false,
-        message: 'Weekly scan limit reached',
-        code: 'SCAN_LIMIT_REACHED',
-        upgradeUrl: '/pricing',
-        resetDate: nextWeek.toISOString(),
-        scansUsed: scansThisWeek,
-        scansRemaining: 0,
-        tier: 'free',
-        maxScans: 1
-      });
-    }
+    const proScansThisWeek = user.scanHistory?.filter(scan => 
+      new Date(scan.createdAt) >= startOfWeek && 
+      scan.analysisResults?.analysisType === 'pro'
+    ).length || 0;
 
-    // Add scan count info to response for Free users
-    req.scanInfo = {
-      scansUsed: scansThisWeek,
-      scansRemaining: 1 - scansThisWeek,
-      tier: 'free',
-      maxScans: 1
-    };
+    // Check limits based on analysis type
+    if (analysisType === 'quick') {
+      if (quickScansThisWeek >= 3) {
+        const nextWeek = new Date(startOfWeek);
+        nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
+        
+        return res.status(429).json({
+          success: false,
+          message: 'Weekly quick scan limit reached (3 per week)',
+          code: 'SCAN_LIMIT_REACHED',
+          upgradeUrl: '/pricing',
+          resetDate: nextWeek.toISOString(),
+          scansUsed: quickScansThisWeek,
+          scansRemaining: 3 - quickScansThisWeek,
+          tier: 'free',
+          maxScans: 3,
+          analysisType: 'quick'
+        });
+      }
+
+      req.scanInfo = {
+        scansUsed: quickScansThisWeek,
+        scansRemaining: 3 - quickScansThisWeek,
+        tier: 'free',
+        maxScans: 3,
+        analysisType: 'quick'
+      };
+    } else if (analysisType === 'pro') {
+      if (proScansThisWeek >= 2) {
+        const nextWeek = new Date(startOfWeek);
+        nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
+        
+        return res.status(429).json({
+          success: false,
+          message: 'Weekly Pro analysis limit reached (2 per week)',
+          code: 'SCAN_LIMIT_REACHED',
+          upgradeUrl: '/pricing',
+          resetDate: nextWeek.toISOString(),
+          scansUsed: proScansThisWeek,
+          scansRemaining: 2 - proScansThisWeek,
+          tier: 'free',
+          maxScans: 2,
+          analysisType: 'pro'
+        });
+      }
+
+      req.scanInfo = {
+        scansUsed: proScansThisWeek,
+        scansRemaining: 2 - proScansThisWeek,
+        tier: 'free',
+        maxScans: 2,
+        analysisType: 'pro'
+      };
+    }
 
     next();
   } catch (error) {

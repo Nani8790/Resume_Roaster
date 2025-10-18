@@ -48,9 +48,10 @@ const Pricing = () => {
       period: "forever",
       description: "Perfect for getting started",
       features: [
-        "1 scan per week",
+        "3 quick scans per week",
+        "2 Pro analyses per week", 
         "Basic ATS score",
-        "Formatting check",
+        "Job matching analysis",
         "Email support"
       ],
       buttonText: "Get Started Free",
@@ -59,7 +60,7 @@ const Pricing = () => {
     },
     {
       name: "PRO",
-      price: "$15",
+      price: "$10",
       period: "per month",
       description: "For serious job seekers",
       features: [

@@ -70,13 +70,13 @@
 
 ### Cost Control
 - **OpenAI API Cost**: ~$0.10-0.30 per analysis
-- **Pro Plan Revenue**: $15/month
+- **Pro Plan Revenue**: $10/month
 - **Max Monthly Cost**: 15 scans × $0.30 = $4.50
 - **Profit Margin**: ~70-90% per Pro user
 
 ### Pricing Strategy
 - **Free Tier**: 1 scan/week (4 scans/month) - Loss leader
-- **Pro Tier**: 15 scans/month - Profitable at $15/month
+- **Pro Tier**: 15 scans/month - Profitable at $10/month
 - **Cost per scan**: ~$1 for Pro users
 - **Sustainable scaling**: Predictable costs
 

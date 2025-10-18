@@ -414,7 +414,7 @@ const FreeAnalysisResults = ({ scanData }) => {
                 className="w-full bg-yellow-400 text-gray-900 px-4 py-3 rounded-lg font-bold hover:bg-yellow-300 transition-colors flex items-center justify-center"
               >
                 <Crown className="h-5 w-5 mr-2" />
-                Upgrade to Pro - $15/month
+                Upgrade to Pro - $10/month
               </button>
             </div>
 

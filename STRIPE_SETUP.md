@@ -18,7 +18,7 @@ This guide will walk you through setting up Stripe for Resume Roaster's subscrip
    - **Image**: Upload your logo (optional)
 4. Add pricing:
    - **Pricing model**: Standard pricing
-   - **Price**: $15.00 USD
+   - **Price**: $10.00 USD
    - **Billing period**: Monthly
    - **Currency**: USD
 5. Click **Save product**

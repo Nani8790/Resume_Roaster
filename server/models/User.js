@@ -25,6 +25,10 @@ const userSchema = new mongoose.Schema({
     enum: ['free', 'pro'],
     default: 'free'
   },
+  upgradeDate: {
+    type: Date,
+    default: null
+  },
   stripe_customer_id: {
     type: String,
     default: null
@@ -87,6 +91,11 @@ const userSchema = new mongoose.Schema({
     analysisResults: {
       type: mongoose.Schema.Types.Mixed,
       default: null
+    },
+    tierAtTime: {
+      type: String,
+      enum: ['free', 'pro'],
+      default: 'free'
     },
     createdAt: {
       type: Date,

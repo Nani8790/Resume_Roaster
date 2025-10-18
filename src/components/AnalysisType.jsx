@@ -164,7 +164,7 @@ const AnalysisType = () => {
             <div className="absolute -top-3 left-6">
               <span className="bg-purple-600 text-white text-sm font-bold px-3 py-1 rounded-full flex items-center">
                 <Star className="h-4 w-4 mr-1" />
-                PRO - $15/month
+                PRO - $10/month
               </span>
             </div>
             
