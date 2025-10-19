@@ -1,8 +1,8 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { StripeProvider } from './contexts/StripeContext'
-import Header from './components/Header'
+import Layout from './components/Layout'
 import Hero from './components/Hero'
 import Features from './components/Features'
 import Pricing from './components/Pricing'
@@ -14,11 +14,13 @@ import AuthSuccess from './components/auth/AuthSuccess'
 import Dashboard from './components/Dashboard'
 import AdminDashboard from '../admin/components/AdminDashboard'
 import AdminLogin from '../admin/components/AdminLogin'
+import UserManagement from '../admin/components/UserManagement'
 import ResumeUpload from './components/ResumeUpload'
 import AnalysisType from './components/AnalysisType'
 import AnalysisResults from './components/AnalysisResults'
 import History from './components/History'
 import Settings from './components/Settings'
+import Analytics from './components/Analytics'
 import SubscriptionSuccess from './components/SubscriptionSuccess'
 import SubscriptionCancel from './components/SubscriptionCancel'
 import ProtectedRoute from './components/auth/ProtectedRoute'
@@ -32,17 +34,15 @@ const LandingPage = () => (
     <Hero />
     <Features />
     <Pricing />
+    <Footer />
+    <FloatingScrollToTop />
   </div>
 )
 
 const AppContent = () => {
-  const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
-
   return (
-    <div className="min-h-screen bg-white">
+    <Layout>
       <ScrollToTop />
-      {!isAdminRoute && <Header />}
       <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -108,6 +108,46 @@ const AppContent = () => {
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/analytics" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics/trends" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics/performance" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics/compare" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics/reports" 
+              element={
+                <ProtectedRoute>
+                  <Analytics />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
             <Route path="/admin/dashboard" element={<Navigate to="/admin/login" replace />} />
@@ -119,10 +159,32 @@ const AppContent = () => {
                 </AdminRoute>
               } 
             />
+            <Route 
+              path="/admin/users" 
+              element={
+                <AdminRoute>
+                  <UserManagement />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users/pro" 
+              element={
+                <AdminRoute>
+                  <UserManagement />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users/analytics" 
+              element={
+                <AdminRoute>
+                  <UserManagement />
+                </AdminRoute>
+              } 
+            />
       </Routes>
-      {!isAdminRoute && <Footer />}
-      {!isAdminRoute && <FloatingScrollToTop />}
-    </div>
+    </Layout>
   );
 };
 

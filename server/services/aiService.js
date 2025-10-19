@@ -1,19 +1,49 @@
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import Settings from '../models/Settings.js';
 
-let client = null;
+let openaiClient = null;
+let geminiClient = null;
 
 const getOpenAIClient = () => {
-  if (!client && validateOpenAIKey()) {
-    client = new OpenAI();
+  if (!openaiClient && validateOpenAIKey()) {
+    openaiClient = new OpenAI();
   }
-  return client;
+  return openaiClient;
+};
+
+const getGeminiClient = () => {
+  if (!geminiClient && validateGeminiKey()) {
+    geminiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  }
+  return geminiClient;
+};
+
+const getCurrentAIProvider = async () => {
+  try {
+    const provider = await Settings.getValue('ai_provider', process.env.AI_PROVIDER || 'openai');
+    return provider;
+  } catch (error) {
+    console.error('Error getting AI provider from settings:', error);
+    return process.env.AI_PROVIDER || 'openai';
+  }
 };
 
 export const analyzeResumeWithAI = async (resumeText, analysisType, jobDescription = null) => {
   try {
-    // Validate API key
-    if (!validateOpenAIKey()) {
-      throw new Error('OpenAI API key not configured');
+    const aiProvider = await getCurrentAIProvider();
+    
+    // Validate API key based on provider
+    if (aiProvider === 'gemini' && !validateGeminiKey()) {
+      console.log('Gemini API key not configured, falling back to OpenAI');
+      if (!validateOpenAIKey()) {
+        throw new Error('No AI service configured');
+      }
+    } else if (aiProvider === 'openai' && !validateOpenAIKey()) {
+      console.log('OpenAI API key not configured, falling back to Gemini');
+      if (!validateGeminiKey()) {
+        throw new Error('No AI service configured');
+      }
     }
 
     // Truncate resume text if too long (OpenAI has token limits)
@@ -200,40 +230,64 @@ Provide analysis in JSON format:
 Be extremely specific about where and how to add missing keywords naturally. IMPORTANT: Base ALL analysis on the actual resume and job description content. Be specific and actionable.`;
     }
 
-    const openaiClient = getOpenAIClient();
-    if (!openaiClient) {
-      throw new Error('OpenAI client not available');
-    }
-
-    console.log('Calling OpenAI API with GPT-4');
+    let aiResponse;
     const startTime = Date.now();
 
-    const response = await Promise.race([
-      openaiClient.chat.completions.create({
-        model: "gpt-4",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert ATS resume analyst with 15+ years of experience in recruitment and applicant tracking systems. You provide specific, actionable feedback based on actual resume content with deep keyword analysis and job matching capabilities. You understand how ATS systems parse resumes and can identify exactly where and how to add missing keywords naturally. Return ONLY valid JSON without any markdown formatting or explanations."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 2000,
-      }),
-      // 60 second timeout
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('AI analysis timeout')), 60000)
-      )
-    ]);
+    if (aiProvider === 'gemini' && validateGeminiKey()) {
+      console.log('Calling Gemini API with gemini-2.0-flash-exp');
+      const geminiClient = getGeminiClient();
+      const model = geminiClient.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-    const endTime = Date.now();
-    console.log(`OpenAI API call completed in ${endTime - startTime}ms`);
+      const systemPrompt = "You are an expert ATS resume analyst with 15+ years of experience in recruitment and applicant tracking systems. You provide specific, actionable feedback based on actual resume content with deep keyword analysis and job matching capabilities. You understand how ATS systems parse resumes and can identify exactly where and how to add missing keywords naturally. Return ONLY valid JSON without any markdown formatting or explanations.";
+      
+      const fullPrompt = `${systemPrompt}\n\n${prompt}`;
 
-    const aiResponse = response.choices[0].message.content;
+      const response = await Promise.race([
+        model.generateContent(fullPrompt),
+        // 60 second timeout
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('AI analysis timeout')), 60000)
+        )
+      ]);
+
+      const endTime = Date.now();
+      console.log(`Gemini API call completed in ${endTime - startTime}ms`);
+
+      aiResponse = response.response.text();
+    } else {
+      console.log('Calling OpenAI API with GPT-4');
+      const openaiClient = getOpenAIClient();
+      if (!openaiClient) {
+        throw new Error('OpenAI client not available');
+      }
+
+      const response = await Promise.race([
+        openaiClient.chat.completions.create({
+          model: "gpt-4",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert ATS resume analyst with 15+ years of experience in recruitment and applicant tracking systems. You provide specific, actionable feedback based on actual resume content with deep keyword analysis and job matching capabilities. You understand how ATS systems parse resumes and can identify exactly where and how to add missing keywords naturally. Return ONLY valid JSON without any markdown formatting or explanations."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.2,
+          max_tokens: 2000,
+        }),
+        // 60 second timeout
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('AI analysis timeout')), 60000)
+        )
+      ]);
+
+      const endTime = Date.now();
+      console.log(`OpenAI API call completed in ${endTime - startTime}ms`);
+
+      aiResponse = response.choices[0].message.content;
+    }
     console.log('Raw AI response length:', aiResponse.length);
 
     // Clean the response - remove any markdown formatting
@@ -645,4 +699,21 @@ const detectSkillsSection = (lines) => {
 
 export const validateOpenAIKey = () => {
   return !!process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.startsWith('sk-');
+};
+
+export const validateGeminiKey = () => {
+  return !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.startsWith('AIza');
+};
+
+export const getAIProviderStatus = async () => {
+  const currentProvider = await getCurrentAIProvider();
+  const openaiConfigured = validateOpenAIKey();
+  const geminiConfigured = validateGeminiKey();
+  
+  return {
+    currentProvider,
+    openaiConfigured,
+    geminiConfigured,
+    hasAnyProvider: openaiConfigured || geminiConfigured
+  };
 };

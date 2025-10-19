@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FileText, CheckCircle, AlertTriangle, Download, ArrowLeft, RefreshCw, AlertCircle, Target, Crown } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
+import ProgressIndicator from './ui/ProgressIndicator';
+import ProgressBar from './ui/ProgressBar';
+import ScoreCard from './ui/ScoreCard';
 
 const FreeAnalysisResults = ({ scanData }) => {
   const navigate = useNavigate();
@@ -215,33 +217,13 @@ const FreeAnalysisResults = ({ scanData }) => {
             <div className="bg-white rounded-lg shadow-lg p-8">
               <div className="text-center">
                 {/* Circular Progress Indicator */}
-                <div className="relative w-48 h-48 mx-auto mb-6">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Score', value: results.score },
-                          { name: 'Remaining', value: 100 - results.score }
-                        ]}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        startAngle={90}
-                        endAngle={-270}
-                        dataKey="value"
-                      >
-                        <Cell fill={getScoreColor(results.score)} />
-                        <Cell fill="#E5E7EB" />
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-gray-900">{results.score}</div>
-                      <div className="text-sm text-gray-500">out of 100</div>
-                    </div>
-                  </div>
+                <div className="mb-6">
+                  <ProgressIndicator 
+                    score={results.score} 
+                    size="xl" 
+                    showLabel={false}
+                    animated={true}
+                  />
                 </div>
 
                 <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -262,59 +244,32 @@ const FreeAnalysisResults = ({ scanData }) => {
             <div className="bg-white rounded-lg shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-6">Score Breakdown</h3>
               <div className="space-y-6">
-                {/* Formatting Score */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-700">Formatting</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-gray-900">{results.aiAnalysis?.formatting_score || 85}/100</span>
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm text-green-600 font-medium">Good</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-500 h-3 rounded-full transition-all duration-1000" 
-                      style={{ width: `${results.aiAnalysis?.formatting_score || 85}%` }}
-                    ></div>
-                  </div>
-                </div>
+                <ProgressBar
+                  score={results.aiAnalysis?.formatting_score || 85}
+                  label="Formatting"
+                  height="h-4"
+                  showScore={true}
+                  animated={true}
+                  showGradient={true}
+                />
 
-                {/* Content Score */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-700">Content</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-gray-900">{results.aiAnalysis?.content_score || 65}/100</span>
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                      <span className="text-sm text-yellow-600 font-medium">Needs Work</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-yellow-500 h-3 rounded-full transition-all duration-1000" 
-                      style={{ width: `${results.aiAnalysis?.content_score || 65}%` }}
-                    ></div>
-                  </div>
-                </div>
+                <ProgressBar
+                  score={results.aiAnalysis?.content_score || 65}
+                  label="Content"
+                  height="h-4"
+                  showScore={true}
+                  animated={true}
+                  showGradient={true}
+                />
 
-                {/* Structure Score */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-gray-700">Structure</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-bold text-gray-900">{results.aiAnalysis?.structure_score || 75}/100</span>
-                      <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                      <span className="text-sm text-yellow-600 font-medium">Could Be Better</span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-yellow-500 h-3 rounded-full transition-all duration-1000" 
-                      style={{ width: `${results.aiAnalysis?.structure_score || 75}%` }}
-                    ></div>
-                  </div>
-                </div>
+                <ProgressBar
+                  score={results.aiAnalysis?.structure_score || 75}
+                  label="Structure"
+                  height="h-4"
+                  showScore={true}
+                  animated={true}
+                  showGradient={true}
+                />
               </div>
             </div>
 

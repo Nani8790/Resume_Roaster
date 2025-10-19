@@ -14,9 +14,11 @@
     "test-stripe": "node test-stripe-integration.js",
     "demo-stripe": "node demo-stripe-flow.js",
     "test-admin": "node test-admin-dashboard.js",
-    "create-admin": "node test-admin-dashboard.js create-admin"
+    "create-admin": "node test-admin-dashboard.js create-admin",
+    "init-settings": "node server/scripts/initializeSettings.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",
@@ -39,7 +41,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.1",
-    "recharts": "^3.2.1",
+
     "stripe": "^19.1.0"
   },
   "devDependencies": {

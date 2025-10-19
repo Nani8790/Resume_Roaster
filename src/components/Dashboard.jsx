@@ -13,7 +13,10 @@ import {
   ArrowRight,
   AlertCircle
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ProgressIndicator from './ui/ProgressIndicator';
+import ProgressBar from './ui/ProgressBar';
+import ScoreCard from './ui/ScoreCard';
+import AnimatedCounter from './ui/AnimatedCounter';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -171,43 +174,54 @@ const Dashboard = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover-lift animate-fade-in animate-stagger-1">
             <div className="flex items-center">
-              <FileText className="h-8 w-8 text-purple-600" />
+              <div className="p-3 bg-purple-100 rounded-full">
+                <FileText className="h-8 w-8 text-purple-600" />
+              </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Scans</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats?.totalScans || 0}
+                  <AnimatedCounter value={stats?.totalScans || 0} duration={1200} />
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover-lift animate-fade-in animate-stagger-2">
             <div className="flex items-center">
-              <BarChart3 className="h-8 w-8 text-green-600" />
+              <div className="p-3 bg-green-100 rounded-full">
+                <BarChart3 className="h-8 w-8 text-green-600" />
+              </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Avg Score</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats?.avgScore ? `${stats.avgScore}/100` : '--'}
+                  {stats?.avgScore ? (
+                    <>
+                      <AnimatedCounter value={stats.avgScore} duration={1200} />
+                      /100
+                    </>
+                  ) : '--'}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover-lift animate-fade-in animate-stagger-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Crown className="h-8 w-8 text-yellow-600" />
+                <div className="p-3 bg-yellow-100 rounded-full">
+                  <Crown className="h-8 w-8 text-yellow-600" />
+                </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Current Plan</p>
                   <div className="flex items-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                       user?.tier === 'pro' 
-                        ? 'bg-yellow-100 text-yellow-800' 
+                        ? 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-white' 
                         : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {user?.tier === 'pro' ? 'Pro' : 'Free'}
+                      {user?.tier === 'pro' ? '👑 Pro' : 'Free'}
                     </span>
                   </div>
                 </div>
@@ -290,77 +304,61 @@ const Dashboard = () => {
 
         {/* Score Trend Chart */}
         {trendData.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900 flex items-center">
                 <TrendingUp className="h-5 w-5 mr-2" />
                 Score Progress
               </h2>
             </div>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={trendData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  />
-                  <YAxis domain={[0, 100]} />
-                  <Tooltip 
-                    labelFormatter={(date) => formatDate(date)}
-                    formatter={(value, name) => [`${value}/100`, 'Score']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="score" 
-                    stroke="#8b5cf6" 
-                    strokeWidth={3}
-                    dot={{ fill: '#8b5cf6', strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            
+            {/* Latest Score Display */}
+            <div className="flex items-center justify-center mb-6">
+              <ProgressIndicator 
+                score={trendData[trendData.length - 1]?.score || 0} 
+                size="lg"
+                showLabel={true}
+                animated={true}
+              />
+            </div>
+
+            {/* Progress Timeline */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Progress</h3>
+              {trendData.slice(-5).map((item, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                      <span className="text-purple-600 font-bold text-sm">{index + 1}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-900 font-medium">
+                        {formatDate(item.date)}
+                      </span>
+                      <p className="text-gray-500 text-sm">Resume Analysis</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <ProgressBar 
+                      score={item.score} 
+                      className="w-32" 
+                      height="h-2"
+                      showScore={false}
+                      animated={true}
+                      showGradient={true}
+                    />
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-gray-900">{item.score}</span>
+                      <span className="text-gray-500 text-sm">/100</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-center">
-              <Upload className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                Analyze New Resume
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Upload and get instant ATS compatibility feedback
-              </p>
-              <button 
-                onClick={() => navigate('/upload')}
-                className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition-colors w-full"
-              >
-                Upload Resume
-              </button>
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-center">
-              <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                View All History
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Browse all your previous resume scans and results
-              </p>
-              <button 
-                onClick={() => navigate('/history')}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors w-full"
-              >
-                View History
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Recent Scans Table */}
         <div className="bg-white rounded-lg shadow">
