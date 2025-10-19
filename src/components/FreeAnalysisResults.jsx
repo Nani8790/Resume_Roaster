@@ -315,10 +315,10 @@ const FreeAnalysisResults = ({ scanData }) => {
                               <div className="font-medium text-gray-900 mb-1">Example:</div>
                               <div className="space-y-1">
                                 <div className="text-red-700">
-                                  <span className="font-medium">Before:</span> "Responsible for managing projects"
+                                  <span className="font-medium">Before:</span> {recommendation.example?.before || '"Responsible for managing projects"'}
                                 </div>
                                 <div className="text-green-700">
-                                  <span className="font-medium">After:</span> "Led 5 cross-functional projects, delivering $2M in cost savings"
+                                  <span className="font-medium">After:</span> {recommendation.example?.after || '"Led 5 cross-functional projects, delivering $2M in cost savings"'}
                                 </div>
                               </div>
                             </div>
