@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FileText, CheckCircle, AlertTriangle, TrendingUp, Download, ArrowLeft, RefreshCw, AlertCircle, Crown, Star, Target, ChevronDown, ChevronUp, Save, BarChart3, Award, Zap, Eye, EyeOff } from 'lucide-react';
-// Recharts removed to avoid build issues - using simple chart representations
 import { useAuth } from '../contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
+import ProgressIndicator from './ui/ProgressIndicator';
+import ProgressBar from './ui/ProgressBar';
+import ScoreCard from './ui/ScoreCard';
 
 const ProAnalysisResults = ({ scanData }) => {
   const navigate = useNavigate();
@@ -15,9 +17,9 @@ const ProAnalysisResults = ({ scanData }) => {
   const [retrying, setRetrying] = useState(false);
   const [expandedSections, setExpandedSections] = useState({});
   const [showBeforeAfter, setShowBeforeAfter] = useState(false);
-  
+
   const { fileId, fileName, jobDescription } = location.state || {};
-  
+
   // Use scanData if provided (from dashboard), otherwise use location state
   const actualFileId = scanData?.id || fileId;
   const actualFileName = scanData?.filename || fileName;
@@ -27,7 +29,7 @@ const ProAnalysisResults = ({ scanData }) => {
     try {
       setError(null);
       setRetrying(false);
-      
+
       const response = await fetch('/api/resume/analyze', {
         method: 'POST',
         headers: {
@@ -84,7 +86,7 @@ const ProAnalysisResults = ({ scanData }) => {
   useEffect(() => {
     // Scroll to top when component mounts
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     // If scanData is provided, use it directly
     if (scanData && scanData.analysisResults) {
       setResults(scanData.analysisResults);
@@ -148,7 +150,7 @@ const ProAnalysisResults = ({ scanData }) => {
       if (!response.ok) {
         console.log('Response status:', response.status);
         console.log('Response headers:', response.headers);
-        
+
         // Check if response is JSON or HTML
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -164,7 +166,7 @@ const ProAnalysisResults = ({ scanData }) => {
 
       // Get the PDF blob
       const blob = await response.blob();
-      
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -172,11 +174,11 @@ const ProAnalysisResults = ({ scanData }) => {
       link.download = `resume-analysis-${actualFileName.replace(/\.[^/.]+$/, '')}-${Date.now()}.pdf`;
       document.body.appendChild(link);
       link.click();
-      
+
       // Cleanup
       window.URL.revokeObjectURL(url);
       document.body.removeChild(link);
-      
+
     } catch (error) {
       console.error('PDF download error:', error);
       alert('Failed to generate PDF report. Please try again.');
@@ -196,11 +198,11 @@ const ProAnalysisResults = ({ scanData }) => {
       { name: 'Content', score: results.aiAnalysis?.content_score || 80, color: '#10B981' },
       { name: 'Structure', score: results.aiAnalysis?.structure_score || 85, color: '#8B5CF6' }
     ];
-    
+
     if (actualJobDescription) {
       data.push({ name: 'Keywords', score: results.jobMatch?.keywordMatch || 70, color: '#F59E0B' });
     }
-    
+
     return data;
   };
 
@@ -281,86 +283,28 @@ const ProAnalysisResults = ({ scanData }) => {
           <div className="bg-white rounded-xl shadow-lg p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Overall ATS Score */}
-              <div className="text-center">
-                <div className="relative w-40 h-40 mx-auto mb-4">
-                  {/* Simple circular progress indicator */}
-                  <div className="relative w-40 h-40">
-                    <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
-                      {/* Background circle */}
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke="#E5E7EB"
-                        strokeWidth="10"
-                        fill="none"
-                      />
-                      {/* Progress circle */}
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="35"
-                        stroke={getScoreColor(results.score)}
-                        strokeWidth="10"
-                        fill="none"
-                        strokeDasharray={`${(results.score / 100) * 219.8} 219.8`}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-gray-900">{results.score}</div>
-                        <div className="text-xs text-gray-500">ATS Score</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Overall ATS Score</h3>
-                <p className="text-sm text-gray-600">Resume compatibility with ATS systems</p>
-              </div>
+              <ScoreCard
+                title="Overall ATS Score"
+                score={results.score}
+                description="Resume compatibility with ATS systems"
+                type="circular"
+                size="lg"
+                className="border-0 shadow-none p-0"
+              />
 
               {/* Job Match Score (only if job-specific) */}
               {actualJobDescription && results.jobMatch && (
-                <div className="text-center">
-                  <div className="relative w-40 h-40 mx-auto mb-4">
-                    {/* Simple circular progress indicator */}
-                    <div className="relative w-40 h-40">
-                      <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Background circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="35"
-                          stroke="#E5E7EB"
-                          strokeWidth="10"
-                          fill="none"
-                        />
-                        {/* Progress circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="35"
-                          stroke={getScoreColor(results.jobMatch.overallMatch || results.score)}
-                          strokeWidth="10"
-                          fill="none"
-                          strokeDasharray={`${((results.jobMatch.overallMatch || results.score) / 100) * 219.8} 219.8`}
-                          strokeLinecap="round"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-3xl font-bold text-gray-900">{results.jobMatch.overallMatch || results.score}</div>
-                          <div className="text-xs text-gray-500">Job Match</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Job Match Score</h3>
-                  <p className="text-sm text-gray-600">How well your resume matches this specific job</p>
-                </div>
+                <ScoreCard
+                  title="Job Match Score"
+                  score={results.jobMatch.overallMatch || results.score}
+                  description="How well your resume matches this specific job"
+                  type="circular"
+                  size="lg"
+                  className="border-0 shadow-none p-0"
+                />
               )}
             </div>
-            
+
             <div className="mt-6 text-center">
               <h2 className="text-2xl font-bold mb-2" style={{ color: getScoreColor(results.score) }}>
                 {getScoreLabel(results.score)}
@@ -378,25 +322,18 @@ const ProAnalysisResults = ({ scanData }) => {
               <BarChart3 className="h-6 w-6 text-blue-600 mr-2" />
               Score Breakdown
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {createBarData().map((item, index) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <div className="w-20 text-sm font-medium text-gray-700">{item.name}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-1 bg-gray-200 rounded-full h-3">
-                        <div 
-                          className="h-3 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${item.score}%`, 
-                            backgroundColor: item.color 
-                          }}
-                        ></div>
-                      </div>
-                      <div className="w-12 text-sm font-bold text-gray-900">{item.score}/100</div>
-                    </div>
-                  </div>
-                </div>
+                <ProgressBar
+                  key={index}
+                  score={item.score}
+                  label={item.name}
+                  height="h-4"
+                  showScore={true}
+                  animated={true}
+                  showGradient={true}
+                  color={item.color}
+                />
               ))}
             </div>
           </div>
@@ -408,7 +345,7 @@ const ProAnalysisResults = ({ scanData }) => {
                 <Target className="h-6 w-6 text-green-600 mr-2" />
                 Keyword Analysis
               </h3>
-              
+
               {/* Keyword Count Summary */}
               <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                 <div className="text-center">
@@ -418,8 +355,8 @@ const ProAnalysisResults = ({ scanData }) => {
                   </div>
                   <div className="text-sm text-gray-600 mb-3">critical keywords found</div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div 
-                      className="bg-green-500 h-3 rounded-full transition-all duration-500" 
+                    <div
+                      className="bg-green-500 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${results.jobMatch.keywordAnalysis.match_percentage || 0}%` }}
                     ></div>
                   </div>
@@ -469,7 +406,7 @@ const ProAnalysisResults = ({ scanData }) => {
               <Zap className="h-6 w-6 text-yellow-500 mr-2" />
               Priority Recommendations
             </h3>
-            
+
             <div className="space-y-6">
               {/* Critical Priority */}
               <div>
@@ -479,15 +416,15 @@ const ProAnalysisResults = ({ scanData }) => {
                 <div className="space-y-4">
                   {(results.aiAnalysis?.recommendations || results.feedback || [])
                     .filter((rec, index) => {
-                      const recommendation = typeof rec === 'string' ? 
+                      const recommendation = typeof rec === 'string' ?
                         { priority: index < 2 ? 'critical' : 'important' } : rec;
                       return recommendation.priority === 'critical';
                     })
                     .slice(0, 3)
                     .map((rec, index) => {
-                      const recommendation = typeof rec === 'string' ? 
+                      const recommendation = typeof rec === 'string' ?
                         { issue: rec, suggestion: 'Address this issue to improve your resume score', section: 'General' } : rec;
-                      
+
                       return (
                         <div key={index} className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
                           <div className="flex items-start space-x-3">
@@ -533,15 +470,15 @@ const ProAnalysisResults = ({ scanData }) => {
                 <div className="space-y-4">
                   {(results.aiAnalysis?.recommendations || results.feedback || [])
                     .filter((rec, index) => {
-                      const recommendation = typeof rec === 'string' ? 
+                      const recommendation = typeof rec === 'string' ?
                         { priority: index < 2 ? 'critical' : index < 4 ? 'important' : 'nice_to_have' } : rec;
                       return recommendation.priority === 'important';
                     })
                     .slice(0, 3)
                     .map((rec, index) => {
-                      const recommendation = typeof rec === 'string' ? 
+                      const recommendation = typeof rec === 'string' ?
                         { issue: rec, suggestion: 'Consider addressing this to enhance your resume', section: 'General' } : rec;
-                      
+
                       return (
                         <div key={index} className="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
                           <div className="flex items-start space-x-3">
@@ -578,15 +515,15 @@ const ProAnalysisResults = ({ scanData }) => {
                 <div className="space-y-4">
                   {(results.aiAnalysis?.recommendations || results.feedback || [])
                     .filter((rec, index) => {
-                      const recommendation = typeof rec === 'string' ? 
+                      const recommendation = typeof rec === 'string' ?
                         { priority: index < 2 ? 'critical' : index < 4 ? 'important' : 'nice_to_have' } : rec;
                       return recommendation.priority === 'nice_to_have' || recommendation.priority === 'nice-to-have';
                     })
                     .slice(0, 2)
                     .map((rec, index) => {
-                      const recommendation = typeof rec === 'string' ? 
+                      const recommendation = typeof rec === 'string' ?
                         { issue: rec, suggestion: 'Optional improvement for resume polish', section: 'General' } : rec;
-                      
+
                       return (
                         <div key={index} className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
                           <div className="flex items-start space-x-3">
@@ -623,7 +560,7 @@ const ProAnalysisResults = ({ scanData }) => {
               <Award className="h-6 w-6 text-purple-600 mr-2" />
               Detailed Section Analysis
             </h3>
-            
+
             <div className="space-y-4">
               {/* Contact Information */}
               <div className="border border-gray-200 rounded-lg">
@@ -673,11 +610,10 @@ const ProAnalysisResults = ({ scanData }) => {
                   <div className="flex items-center space-x-3">
                     <span className="text-lg">📝</span>
                     <span className="font-medium text-gray-900">Professional Summary</span>
-                    <span className={`px-2 py-1 rounded text-sm font-medium ${
-                      results.jobMatch?.sectionAnalysis?.summary?.score >= 80 ? 'bg-green-100 text-green-800' :
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${results.jobMatch?.sectionAnalysis?.summary?.score >= 80 ? 'bg-green-100 text-green-800' :
                       results.jobMatch?.sectionAnalysis?.summary?.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       Score: {results.jobMatch?.sectionAnalysis?.summary?.score || 75}/100
                     </span>
                   </div>
@@ -697,8 +633,8 @@ const ProAnalysisResults = ({ scanData }) => {
                       <div className="bg-blue-50 p-3 rounded-lg mt-3">
                         <div className="text-sm font-medium text-blue-900 mb-1">→ Actionable Fix:</div>
                         <div className="text-sm text-blue-800">
-                          {results.jobMatch?.sectionAnalysis?.summary?.suggested_rewrite || 
-                           "Incorporate 2-3 key terms from the job description into your summary"}
+                          {results.jobMatch?.sectionAnalysis?.summary?.suggested_rewrite ||
+                            "Incorporate 2-3 key terms from the job description into your summary"}
                         </div>
                       </div>
                     </div>
@@ -715,11 +651,10 @@ const ProAnalysisResults = ({ scanData }) => {
                   <div className="flex items-center space-x-3">
                     <span className="text-lg">💼</span>
                     <span className="font-medium text-gray-900">Work Experience</span>
-                    <span className={`px-2 py-1 rounded text-sm font-medium ${
-                      results.jobMatch?.sectionAnalysis?.experience?.score >= 80 ? 'bg-green-100 text-green-800' :
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${results.jobMatch?.sectionAnalysis?.experience?.score >= 80 ? 'bg-green-100 text-green-800' :
                       results.jobMatch?.sectionAnalysis?.experience?.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       Score: {results.jobMatch?.sectionAnalysis?.experience?.score || 82}/100
                     </span>
                   </div>
@@ -758,11 +693,10 @@ const ProAnalysisResults = ({ scanData }) => {
                   <div className="flex items-center space-x-3">
                     <span className="text-lg">🛠️</span>
                     <span className="font-medium text-gray-900">Skills</span>
-                    <span className={`px-2 py-1 rounded text-sm font-medium ${
-                      results.jobMatch?.sectionAnalysis?.skills?.score >= 80 ? 'bg-green-100 text-green-800' :
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${results.jobMatch?.sectionAnalysis?.skills?.score >= 80 ? 'bg-green-100 text-green-800' :
                       results.jobMatch?.sectionAnalysis?.skills?.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       Score: {results.jobMatch?.sectionAnalysis?.skills?.score || 78}/100
                     </span>
                   </div>
@@ -782,7 +716,7 @@ const ProAnalysisResults = ({ scanData }) => {
                       <div className="bg-blue-50 p-3 rounded-lg mt-3">
                         <div className="text-sm font-medium text-blue-900 mb-1">→ Actionable Fix:</div>
                         <div className="text-sm text-blue-800">
-                          Add these missing skills if you have experience: 
+                          Add these missing skills if you have experience:
                           {(results.jobMatch?.sectionAnalysis?.skills?.missing_from_job || ['Python', 'AWS']).slice(0, 3).join(', ')}
                         </div>
                       </div>
@@ -835,11 +769,10 @@ const ProAnalysisResults = ({ scanData }) => {
                   <div className="flex items-center space-x-3">
                     <span className="text-lg">🚀</span>
                     <span className="font-medium text-gray-900">Projects</span>
-                    <span className={`px-2 py-1 rounded text-sm font-medium ${
-                      results.jobMatch?.sectionAnalysis?.projects?.score >= 80 ? 'bg-green-100 text-green-800' :
+                    <span className={`px-2 py-1 rounded text-sm font-medium ${results.jobMatch?.sectionAnalysis?.projects?.score >= 80 ? 'bg-green-100 text-green-800' :
                       results.jobMatch?.sectionAnalysis?.projects?.score >= 60 ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                        'bg-red-100 text-red-800'
+                      }`}>
                       Score: {results.jobMatch?.sectionAnalysis?.projects?.score || 65}/100
                     </span>
                   </div>
@@ -869,9 +802,8 @@ const ProAnalysisResults = ({ scanData }) => {
                               <div key={index} className="bg-white p-3 rounded-lg border border-purple-200">
                                 <div className="flex items-start justify-between mb-2">
                                   <h5 className="font-semibold text-purple-900 text-sm">{project.title}</h5>
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    project.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                                  }`}>
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${project.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
                                     {project.priority === 'high' ? 'High Priority' : 'Medium Priority'}
                                   </span>
                                 </div>
@@ -915,7 +847,7 @@ const ProAnalysisResults = ({ scanData }) => {
                 <Target className="h-6 w-6 text-purple-600 mr-2" />
                 Recommended Projects to Build
               </h3>
-              
+
               <div className="mb-4 p-4 bg-purple-50 rounded-lg">
                 <p className="text-purple-800 text-sm">
                   Based on the job description, here are specific projects you should build to strengthen your application and demonstrate relevant skills.
@@ -927,15 +859,14 @@ const ProAnalysisResults = ({ scanData }) => {
                   <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between mb-3">
                       <h4 className="font-semibold text-gray-900">{project.title}</h4>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        project.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${project.priority === 'high' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
                         {project.priority === 'high' ? '🔥 High Priority' : '⭐ Medium Priority'}
                       </span>
                     </div>
-                    
+
                     <p className="text-gray-600 text-sm mb-4">{project.description}</p>
-                    
+
                     <div className="space-y-3">
                       <div>
                         <div className="text-xs font-medium text-gray-700 mb-2">Key Skills to Demonstrate:</div>
@@ -947,7 +878,7 @@ const ProAnalysisResults = ({ scanData }) => {
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
                         <div className="flex items-center space-x-3">
                           <span className="flex items-center">
@@ -978,81 +909,38 @@ const ProAnalysisResults = ({ scanData }) => {
             </div>
           )}
 
-          {/* 7. Before & After Examples */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                <TrendingUp className="h-6 w-6 text-green-600 mr-2" />
-                Before & After Examples
-              </h3>
-              <button
-                onClick={() => setShowBeforeAfter(!showBeforeAfter)}
-                className="flex items-center text-purple-600 hover:text-purple-700 text-sm font-medium"
-              >
-                {showBeforeAfter ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-                {showBeforeAfter ? 'Hide Examples' : 'Show Examples'}
-              </button>
-            </div>
-            
-            {showBeforeAfter && (
+          {/* 7. Before & After Examples - Only show if AI analysis has improvement examples */}
+          {results.aiAnalysis?.improvement_examples?.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                  <TrendingUp className="h-6 w-6 text-green-600 mr-2" />
+                  AI-Powered Improvement Examples
+                </h3>
+                <button
+                  onClick={() => setShowBeforeAfter(!showBeforeAfter)}
+                  className="flex items-center text-purple-600 hover:text-purple-700 text-sm font-medium"
+                >
+                  {showBeforeAfter ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+                  {showBeforeAfter ? 'Hide Examples' : 'Show Examples'}
+                </button>
+              </div>
+
+              {showBeforeAfter && (
               <div className="space-y-6">
-                {/* Example 1 */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">Professional Summary Enhancement</h4>
-                  <div className="space-y-3">
-                    <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg">
-                      <div className="flex items-center mb-2">
-                        <span className="text-red-600 font-medium text-sm">❌ BEFORE:</span>
-                      </div>
-                      <p className="text-red-800 text-sm italic">
-                        "Experienced professional with good communication skills and ability to work in teams."
-                      </p>
-                    </div>
-                    <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-lg">
-                      <div className="flex items-center mb-2">
-                        <span className="text-green-600 font-medium text-sm">✅ AFTER:</span>
-                      </div>
-                      <p className="text-green-800 text-sm italic">
-                        "Results-driven Software Engineer with 5+ years developing scalable web applications using React, Node.js, and AWS. Led cross-functional teams of 8+ members, delivering projects 20% ahead of schedule while reducing costs by $150K annually."
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Example 2 */}
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">Experience Bullet Point Improvement</h4>
-                  <div className="space-y-3">
-                    <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg">
-                      <div className="flex items-center mb-2">
-                        <span className="text-red-600 font-medium text-sm">❌ BEFORE:</span>
-                      </div>
-                      <p className="text-red-800 text-sm italic">
-                        "Responsible for managing projects and working with clients."
-                      </p>
-                    </div>
-                    <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-lg">
-                      <div className="flex items-center mb-2">
-                        <span className="text-green-600 font-medium text-sm">✅ AFTER:</span>
-                      </div>
-                      <p className="text-green-800 text-sm italic">
-                        "Managed 12 concurrent client projects worth $2.3M, implementing Agile methodologies that improved delivery time by 35% and client satisfaction scores by 28%."
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Example 3 */}
-                {jobDescription && (
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Skills Section Optimization</h4>
+                {/* Render examples dynamically based on AI analysis data */}
+                {results.aiAnalysis.improvement_examples.map((example, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">
+                      {example.section || `Improvement Example ${index + 1}`}
+                    </h4>
                     <div className="space-y-3">
                       <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg">
                         <div className="flex items-center mb-2">
                           <span className="text-red-600 font-medium text-sm">❌ BEFORE:</span>
                         </div>
                         <p className="text-red-800 text-sm italic">
-                          "Programming, Databases, Web Development, Problem Solving"
+                          "{example.before || example.original_text || 'Original text from your resume'}"
                         </p>
                       </div>
                       <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-lg">
@@ -1060,15 +948,23 @@ const ProAnalysisResults = ({ scanData }) => {
                           <span className="text-green-600 font-medium text-sm">✅ AFTER:</span>
                         </div>
                         <p className="text-green-800 text-sm italic">
-                          "JavaScript (ES6+), React.js, Node.js, Python, PostgreSQL, MongoDB, RESTful APIs, AWS (EC2, S3, Lambda), Docker, Git, Agile/Scrum, Test-Driven Development"
+                          "{example.after || example.improved_text || example.suggestion || 'AI-generated improvement'}"
                         </p>
                       </div>
                     </div>
+                    {example.explanation && (
+                      <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          <strong>Why this works:</strong> {example.explanation}
+                        </p>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* 8. Action Buttons */}
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl shadow-lg p-8 text-white">
@@ -1079,23 +975,23 @@ const ProAnalysisResults = ({ scanData }) => {
                 Your comprehensive resume analysis is ready. Take action now to improve your job prospects.
               </p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <button 
+              <button
                 onClick={downloadProReport}
                 className="bg-white text-purple-600 px-6 py-4 rounded-lg font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center"
               >
                 <Download className="h-5 w-5 mr-2" />
                 Download Full PDF Report
               </button>
-              <button 
+              <button
                 onClick={() => navigate('/upload')}
                 className="bg-purple-500 text-white px-6 py-4 rounded-lg font-semibold hover:bg-purple-400 transition-colors flex items-center justify-center"
               >
                 <FileText className="h-5 w-5 mr-2" />
                 Analyze Another Resume
               </button>
-              <button 
+              <button
                 onClick={saveToHistory}
                 className="bg-purple-700 text-white px-6 py-4 rounded-lg font-semibold hover:bg-purple-600 transition-colors flex items-center justify-center"
               >
@@ -1111,7 +1007,7 @@ const ProAnalysisResults = ({ scanData }) => {
               <Star className="h-6 w-6 text-yellow-500 mr-2" />
               Analysis Summary
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Analysis Stats */}
               <div className="text-center p-4 bg-gray-50 rounded-lg">
@@ -1120,14 +1016,14 @@ const ProAnalysisResults = ({ scanData }) => {
                 </div>
                 <div className="text-sm text-gray-600">Recommendations</div>
               </div>
-              
+
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <div className="text-2xl font-bold text-gray-900 mb-1">
                   {results.jobMatch?.keywordAnalysis?.matched_keywords?.length || 0}
                 </div>
                 <div className="text-sm text-gray-600">Keywords Matched</div>
               </div>
-              
+
               <div className="text-center p-4 bg-gray-50 rounded-lg">
                 <div className="text-2xl font-bold text-gray-900 mb-1">
                   {results.strengths?.length || 0}
