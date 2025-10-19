@@ -12,7 +12,9 @@
     "setup-pro": "node setup-pro-account.js",
     "create-pro-direct": "node create-pro-user-direct.js",
     "test-stripe": "node test-stripe-integration.js",
-    "demo-stripe": "node demo-stripe-flow.js"
+    "demo-stripe": "node demo-stripe-flow.js",
+    "test-admin": "node test-admin-dashboard.js",
+    "create-admin": "node test-admin-dashboard.js create-admin"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

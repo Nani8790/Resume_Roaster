@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { StripeProvider } from './contexts/StripeContext'
 import Header from './components/Header'
@@ -12,6 +12,8 @@ import SignupPage from './components/auth/SignupPage'
 import ForgotPasswordPage from './components/auth/ForgotPasswordPage'
 import AuthSuccess from './components/auth/AuthSuccess'
 import Dashboard from './components/Dashboard'
+import AdminDashboard from '../admin/components/AdminDashboard'
+import AdminLogin from '../admin/components/AdminLogin'
 import ResumeUpload from './components/ResumeUpload'
 import AnalysisType from './components/AnalysisType'
 import AnalysisResults from './components/AnalysisResults'
@@ -20,6 +22,7 @@ import Settings from './components/Settings'
 import SubscriptionSuccess from './components/SubscriptionSuccess'
 import SubscriptionCancel from './components/SubscriptionCancel'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import AdminRoute from '../admin/components/AdminRoute'
 
 import ScrollToTop from './components/ScrollToTop'
 import FloatingScrollToTop from './components/FloatingScrollToTop'
@@ -32,15 +35,15 @@ const LandingPage = () => (
   </div>
 )
 
-function App() {
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   return (
-    <Router>
-      <AuthProvider>
-        <StripeProvider>
-          <div className="min-h-screen bg-white">
-            <ScrollToTop />
-            <Header />
-            <Routes>
+    <div className="min-h-screen bg-white">
+      <ScrollToTop />
+      {!isAdminRoute && <Header />}
+      <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/auth/login" element={<LoginPage />} />
@@ -105,10 +108,30 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-          </Routes>
-          <Footer />
-          <FloatingScrollToTop />
-        </div>
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+            <Route path="/admin/dashboard" element={<Navigate to="/admin/login" replace />} />
+            <Route 
+              path="/admin/7780488674" 
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } 
+            />
+      </Routes>
+      {!isAdminRoute && <Footer />}
+      {!isAdminRoute && <FloatingScrollToTop />}
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <StripeProvider>
+          <AppContent />
         </StripeProvider>
       </AuthProvider>
     </Router>

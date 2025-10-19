@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { FileText, User, LogOut, History, Settings, Crown, ChevronDown, Menu, X } from 'lucide-react'
+import { FileText, User, LogOut, History, Settings, Crown, ChevronDown, Menu, X, Shield } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
 const Header = () => {
@@ -9,6 +9,7 @@ const Header = () => {
   const location = useLocation()
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const dropdownRef = useRef(null)
 
   const handleLogout = async () => {
@@ -19,6 +20,37 @@ const Header = () => {
   const isActivePath = (path) => {
     return location.pathname === path
   }
+
+  // Check admin status (only for authorized users)
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user || !isAuthenticated) {
+        setIsAdmin(false)
+        return
+      }
+
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) return
+
+        // The admin check is done on the server side
+        // We just try to access the admin endpoint to see if user has access
+
+        const response = await fetch('/api/admin/7780488674/dashboard/health', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        setIsAdmin(response.ok)
+      } catch (error) {
+        setIsAdmin(false)
+      }
+    }
+
+    checkAdminStatus()
+  }, [user, isAuthenticated])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -155,6 +187,16 @@ const Header = () => {
                       <Settings className="h-4 w-4 inline mr-2" />
                       Settings
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin/7780488674"
+                        onClick={() => setShowUserDropdown(false)}
+                        className="block px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100"
+                      >
+                        <Shield className="h-4 w-4 inline mr-2" />
+                        Admin Control
+                      </Link>
+                    )}
                     {user?.tier !== 'pro' && (
                       <Link
                         to="/pricing"
@@ -236,6 +278,20 @@ const Header = () => {
                 <Settings className="h-4 w-4 mr-2" />
                 Settings
               </Link>
+              {isAdmin && (
+                <Link
+                  to="/admin/7780488674"
+                  onClick={() => setShowMobileMenu(false)}
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    isActivePath('/admin/7780488674')
+                      ? 'text-red-600 bg-red-50'
+                      : 'text-red-600 hover:bg-red-50'
+                  }`}
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Admin Control
+                </Link>
+              )}
               {user?.tier !== 'pro' && (
                 <Link
                   to="/pricing"
