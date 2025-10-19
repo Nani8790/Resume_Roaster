@@ -334,17 +334,24 @@ app.post('/api/debug/upgrade-to-pro', authenticateToken, async (req, res) => {
 });
 
 // Debug endpoint to test AI service
-app.get('/api/debug/ai', (req, res) => {
-  const hasApiKey = !!process.env.OPENAI_API_KEY;
-  const keyLength = process.env.OPENAI_API_KEY?.length || 0;
-  const keyPrefix = process.env.OPENAI_API_KEY?.substring(0, 7) || 'none';
+app.get('/api/debug/ai', async (req, res) => {
+  try {
+    const { getAIProviderStatus } = await import('./services/aiService.js');
+    const aiStatus = await getAIProviderStatus();
 
-  res.json({
-    hasApiKey,
-    keyLength,
-    keyPrefix,
-    configured: hasApiKey && keyLength > 20
-  });
+    res.json({
+      ...aiStatus,
+      openaiKeyLength: process.env.OPENAI_API_KEY?.length || 0,
+      geminiKeyLength: process.env.GEMINI_API_KEY?.length || 0,
+      openaiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 7) || 'none',
+      geminiKeyPrefix: process.env.GEMINI_API_KEY?.substring(0, 7) || 'none'
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+      configured: false
+    });
+  }
 });
 
 // Test Python PDF parser endpoint
@@ -418,7 +425,8 @@ app.post('/api/debug/pdf-test', async (req, res) => {
 // Test AI analysis endpoint
 app.post('/api/debug/ai-test', async (req, res) => {
   try {
-    const { analyzeResumeWithAI } = await import('./services/aiService.js');
+    const { analyzeResumeWithAI, getAIProviderStatus } = await import('./services/aiService.js');
+    const aiStatus = await getAIProviderStatus();
 
     const testResume = `PROFESSIONAL SUMMARY
 Experienced Software Engineer with 5+ years of expertise in full-stack development, specializing in React, Node.js, and cloud technologies. Proven track record of leading development teams and delivering scalable web applications that serve millions of users.
@@ -453,7 +461,9 @@ University of Technology (2014-2018)`;
       success: true,
       message: 'AI analysis test completed',
       result,
-      resumePreview: testResume.substring(0, 200)
+      resumePreview: testResume.substring(0, 200),
+      aiProvider: aiStatus.currentProvider,
+      providerStatus: aiStatus
     });
   } catch (error) {
     res.status(500).json({

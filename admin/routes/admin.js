@@ -1,7 +1,9 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import User from '../../server/models/User.js';
+import Settings from '../../server/models/Settings.js';
 import { authenticateToken, generateToken } from '../../server/middleware/auth.js';
+import { getAIProviderStatus } from '../../server/services/aiService.js';
 
 const router = express.Router();
 
@@ -567,7 +569,7 @@ router.post(`/${ADMIN_SECRET_PATH}/dashboard/users/:userId/upgrade`, authenticat
 router.get(`/${ADMIN_SECRET_PATH}/dashboard/health`, authenticateToken, authenticateAdmin, async (req, res) => {
   try {
     const dbStatus = await User.countDocuments() >= 0 ? 'healthy' : 'error';
-    const aiStatus = process.env.OPENAI_API_KEY ? 'configured' : 'not_configured';
+    const aiProviderStatus = await getAIProviderStatus();
     const stripeStatus = process.env.STRIPE_SECRET_KEY && 
                         process.env.STRIPE_SECRET_KEY !== 'sk_test_your_stripe_secret_key_here' 
                         ? 'configured' : 'not_configured';
@@ -576,7 +578,8 @@ router.get(`/${ADMIN_SECRET_PATH}/dashboard/health`, authenticateToken, authenti
       success: true,
       data: {
         database: dbStatus,
-        ai: aiStatus,
+        ai: aiProviderStatus.hasAnyProvider ? 'configured' : 'not_configured',
+        aiProvider: aiProviderStatus,
         stripe: stripeStatus,
         uptime: process.uptime(),
         memory: process.memoryUsage(),
@@ -611,6 +614,333 @@ router.get(`/${ADMIN_SECRET_PATH}/dashboard/activity-log`, authenticateToken, au
     res.status(500).json({
       success: false,
       message: 'Failed to fetch activity log'
+    });
+  }
+});
+
+// Get AI provider settings
+router.get(`/${ADMIN_SECRET_PATH}/settings/ai-provider`, authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const aiProviderStatus = await getAIProviderStatus();
+    
+    console.log('🤖 ADMIN AI SETTINGS: Settings accessed', {
+      admin: req.user.email,
+      currentProvider: aiProviderStatus.currentProvider,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      data: aiProviderStatus
+    });
+
+  } catch (error) {
+    console.error('AI provider settings error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch AI provider settings'
+    });
+  }
+});
+
+// Update AI provider settings
+router.post(`/${ADMIN_SECRET_PATH}/settings/ai-provider`, authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const { provider } = req.body;
+
+    if (!provider || !['openai', 'gemini'].includes(provider)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid AI provider. Must be "openai" or "gemini"'
+      });
+    }
+
+    // Validate that the selected provider is configured
+    const aiProviderStatus = await getAIProviderStatus();
+    
+    if (provider === 'openai' && !aiProviderStatus.openaiConfigured) {
+      return res.status(400).json({
+        success: false,
+        message: 'OpenAI API key is not configured. Please check environment variables.'
+      });
+    }
+
+    if (provider === 'gemini' && !aiProviderStatus.geminiConfigured) {
+      return res.status(400).json({
+        success: false,
+        message: 'Gemini API key is not configured. Please check environment variables.'
+      });
+    }
+
+    // Update the setting
+    await Settings.setValue(
+      'ai_provider', 
+      provider, 
+      `AI provider set to ${provider}`,
+      req.user._id
+    );
+
+    // Log the change
+    console.log('🔄 ADMIN AI SETTINGS: Provider changed', {
+      admin: req.user.email,
+      previousProvider: aiProviderStatus.currentProvider,
+      newProvider: provider,
+      timestamp: new Date().toISOString()
+    });
+
+    // Get updated status
+    const updatedStatus = await getAIProviderStatus();
+
+    res.json({
+      success: true,
+      message: `AI provider successfully changed to ${provider}`,
+      data: updatedStatus
+    });
+
+  } catch (error) {
+    console.error('AI provider update error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update AI provider settings'
+    });
+  }
+});
+
+// Get all users for admin management
+router.get(`/${ADMIN_SECRET_PATH}/users/all`, authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search, tier, status } = req.query;
+    const skip = (page - 1) * limit;
+
+    let query = {};
+    
+    // Search filter
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Tier filter
+    if (tier && tier !== 'all') {
+      query.tier = tier;
+    }
+
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .select('name email tier createdAt lastLogin scanHistory upgradeDate emailVerified role');
+
+    const total = await User.countDocuments(query);
+
+    const formattedUsers = users.map(user => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      tier: user.tier,
+      role: user.role,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      upgradeDate: user.upgradeDate,
+      emailVerified: user.emailVerified,
+      totalScans: user.scanHistory ? user.scanHistory.length : 0,
+      recentScans: user.scanHistory ? user.scanHistory.slice(-5).length : 0
+    }));
+
+    res.json({
+      success: true,
+      users: formattedUsers,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users'
+    });
+  }
+});
+
+// Get user statistics for admin dashboard
+router.get(`/${ADMIN_SECRET_PATH}/users/stats`, authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+
+    // Basic counts
+    const totalUsers = await User.countDocuments();
+    const proUsers = await User.countDocuments({ tier: 'pro' });
+    const freeUsers = totalUsers - proUsers;
+    
+    // New users this month
+    const newUsersThisMonth = await User.countDocuments({
+      createdAt: { $gte: startOfMonth }
+    });
+
+    // Active users (logged in within last 7 days)
+    const activeUsers = await User.countDocuments({
+      lastLogin: { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) }
+    });
+
+    // Conversion rate
+    const conversionRate = totalUsers > 0 ? ((proUsers / totalUsers) * 100).toFixed(2) : 0;
+
+    // Revenue calculation (simplified)
+    const monthlyRevenue = proUsers * 10; // Assuming $10/month
+
+    res.json({
+      success: true,
+      stats: {
+        total: totalUsers,
+        pro: proUsers,
+        free: freeUsers,
+        active: activeUsers,
+        newThisMonth: newUsersThisMonth,
+        conversionRate: parseFloat(conversionRate),
+        revenue: monthlyRevenue
+      }
+    });
+
+  } catch (error) {
+    console.error('User stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user statistics'
+    });
+  }
+});
+
+// Bulk actions for users
+router.post(`/${ADMIN_SECRET_PATH}/users/bulk-action`, authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    const { action, userIds } = req.body;
+
+    if (!action || !userIds || !Array.isArray(userIds)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid action or user IDs'
+      });
+    }
+
+    let updateQuery = {};
+    let actionDescription = '';
+
+    switch (action) {
+      case 'upgrade':
+        updateQuery = { tier: 'pro', upgradeDate: new Date() };
+        actionDescription = 'Upgraded to Pro';
+        break;
+      case 'downgrade':
+        updateQuery = { tier: 'free', upgradeDate: null };
+        actionDescription = 'Downgraded to Free';
+        break;
+      case 'verify':
+        updateQuery = { emailVerified: true };
+        actionDescription = 'Email verified';
+        break;
+      case 'unverify':
+        updateQuery = { emailVerified: false };
+        actionDescription = 'Email unverified';
+        break;
+      case 'delete':
+        await User.deleteMany({ _id: { $in: userIds } });
+        
+        console.log('🗑️ ADMIN BULK ACTION: Users deleted', {
+          admin: req.user.email,
+          action: 'delete',
+          userCount: userIds.length,
+          timestamp: new Date().toISOString()
+        });
+
+        return res.json({
+          success: true,
+          message: `${userIds.length} users deleted successfully`
+        });
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid action'
+        });
+    }
+
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      updateQuery
+    );
+
+    console.log('⚡ ADMIN BULK ACTION: Users updated', {
+      admin: req.user.email,
+      action,
+      userCount: result.modifiedCount,
+      timestamp: new Date().toISOString()
+    });
+
+    res.json({
+      success: true,
+      message: `${result.modifiedCount} users ${actionDescription.toLowerCase()} successfully`
+    });
+
+  } catch (error) {
+    console.error('Bulk action error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to perform bulk action'
+    });
+  }
+});
+
+// Get admin notifications
+router.get(`/${ADMIN_SECRET_PATH}/notifications`, authenticateToken, authenticateAdmin, async (req, res) => {
+  try {
+    // This would typically come from a notifications collection
+    // For now, return mock notifications
+    const notifications = [
+      {
+        id: 1,
+        title: 'New Pro User',
+        message: 'John Doe upgraded to Pro plan',
+        type: 'upgrade',
+        read: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 30) // 30 minutes ago
+      },
+      {
+        id: 2,
+        title: 'System Alert',
+        message: 'High API usage detected',
+        type: 'warning',
+        read: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2) // 2 hours ago
+      },
+      {
+        id: 3,
+        title: 'Daily Report',
+        message: 'Daily analytics report is ready',
+        type: 'info',
+        read: true,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
+      }
+    ];
+
+    res.json({
+      success: true,
+      notifications
+    });
+
+  } catch (error) {
+    console.error('Admin notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications'
     });
   }
 });

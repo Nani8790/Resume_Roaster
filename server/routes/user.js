@@ -164,4 +164,180 @@ router.delete('/account', authenticateToken, async (req, res) => {
   }
 });
 
+// Get user notifications
+router.get('/notifications', authenticateToken, async (req, res) => {
+  try {
+    // This would typically come from a notifications collection
+    // For now, return mock notifications based on user activity
+    const user = req.user;
+
+    const notifications = [];
+
+    // Add upgrade notification for free users
+    if (user.tier === 'free') {
+      notifications.push({
+        id: 1,
+        title: 'Upgrade to Pro',
+        message: 'Unlock unlimited scans and advanced features',
+        type: 'upgrade',
+        read: false,
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 day ago
+      });
+    }
+
+    // Add welcome notification for new users
+    const daysSinceJoined = Math.floor((new Date() - new Date(user.createdAt)) / (1000 * 60 * 60 * 24));
+    if (daysSinceJoined <= 7) {
+      notifications.push({
+        id: 2,
+        title: 'Welcome to Resume Roaster!',
+        message: 'Get started by uploading your first resume for analysis',
+        type: 'welcome',
+        read: false,
+        createdAt: user.createdAt
+      });
+    }
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    res.json({
+      success: true,
+      notifications,
+      unreadCount
+    });
+
+  } catch (error) {
+    console.error('User notifications error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch notifications'
+    });
+  }
+});
+
+// Get user analytics (Pro feature)
+router.get('/analytics', authenticateToken, async (req, res) => {
+  try {
+    const user = req.user;
+
+    // Check if user has Pro access
+    if (user.tier !== 'pro') {
+      return res.status(403).json({
+        success: false,
+        message: 'Analytics are available for Pro users only'
+      });
+    }
+
+    const { range = '30d' } = req.query;
+
+    // Calculate date range
+    let startDate = new Date();
+    switch (range) {
+      case '7d':
+        startDate.setDate(startDate.getDate() - 7);
+        break;
+      case '30d':
+        startDate.setDate(startDate.getDate() - 30);
+        break;
+      case '90d':
+        startDate.setDate(startDate.getDate() - 90);
+        break;
+      case '1y':
+        startDate.setFullYear(startDate.getFullYear() - 1);
+        break;
+      default:
+        startDate.setDate(startDate.getDate() - 30);
+    }
+
+    // Get user's scan history
+    const scanHistory = user.scanHistory || [];
+    const filteredScans = scanHistory.filter(scan =>
+      new Date(scan.createdAt) >= startDate && scan.analysisResults
+    );
+
+    // Calculate analytics
+    const totalScans = filteredScans.length;
+    const scores = filteredScans
+      .map(scan => scan.analysisResults?.score)
+      .filter(score => score !== undefined);
+
+    const avgScore = scores.length > 0
+      ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+      : 0;
+
+    const topScore = scores.length > 0 ? Math.max(...scores) : 0;
+    const firstScore = scores.length > 0 ? scores[0] : 0;
+    const improvement = firstScore > 0 ? Math.round(((topScore - firstScore) / firstScore) * 100) : 0;
+
+    // Generate score history (mock data for demonstration)
+    const scoreHistory = [];
+    const now = new Date();
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - (i * 7));
+      scoreHistory.push({
+        date: date.toISOString().split('T')[0],
+        score: Math.min(100, avgScore + Math.random() * 20 - 10),
+        jobMatch: Math.min(100, avgScore + Math.random() * 15 - 7)
+      });
+    }
+
+    const analytics = {
+      overview: {
+        totalScans,
+        avgScore,
+        improvement,
+        topScore
+      },
+      scoreHistory,
+      skillsAnalysis: [
+        { skill: 'JavaScript', score: 85, trend: 'up' },
+        { skill: 'React', score: 80, trend: 'up' },
+        { skill: 'Node.js', score: 75, trend: 'stable' },
+        { skill: 'Python', score: 70, trend: 'down' },
+        { skill: 'SQL', score: 65, trend: 'up' }
+      ],
+      industryComparison: [
+        { industry: 'Technology', yourScore: avgScore, avgScore: 72 },
+        { industry: 'Finance', yourScore: Math.max(0, avgScore - 3), avgScore: 70 },
+        { industry: 'Healthcare', yourScore: Math.max(0, avgScore + 2), avgScore: 68 },
+        { industry: 'Education', yourScore: Math.max(0, avgScore + 4), avgScore: 74 }
+      ],
+      scanTypes: [
+        {
+          name: 'Quick Scans',
+          value: filteredScans.filter(s => s.analysisResults?.analysisType === 'quick').length,
+          color: '#3B82F6'
+        },
+        {
+          name: 'Pro Scans',
+          value: filteredScans.filter(s => s.analysisResults?.analysisType === 'pro').length,
+          color: '#8B5CF6'
+        }
+      ],
+      weeklyActivity: [
+        { day: 'Mon', scans: Math.floor(Math.random() * 5) + 1 },
+        { day: 'Tue', scans: Math.floor(Math.random() * 5) + 1 },
+        { day: 'Wed', scans: Math.floor(Math.random() * 5) + 1 },
+        { day: 'Thu', scans: Math.floor(Math.random() * 5) + 1 },
+        { day: 'Fri', scans: Math.floor(Math.random() * 5) + 1 },
+        { day: 'Sat', scans: Math.floor(Math.random() * 3) + 1 },
+        { day: 'Sun', scans: Math.floor(Math.random() * 3) + 1 }
+      ]
+    };
+
+    res.json({
+      success: true,
+      analytics
+    });
+
+  } catch (error) {
+    console.error('User analytics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch analytics'
+    });
+  }
+});
+
 export default router;

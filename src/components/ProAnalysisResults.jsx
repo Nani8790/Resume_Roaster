@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FileText, CheckCircle, AlertTriangle, TrendingUp, Download, ArrowLeft, RefreshCw, AlertCircle, Crown, Star, Target, ChevronDown, ChevronUp, Save, BarChart3, Award, Zap, Eye, EyeOff } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+// Recharts removed to avoid build issues - using simple chart representations
 import { useAuth } from '../contexts/AuthContext';
 import LoadingScreen from './LoadingScreen';
 
@@ -283,27 +283,35 @@ const ProAnalysisResults = ({ scanData }) => {
               {/* Overall ATS Score */}
               <div className="text-center">
                 <div className="relative w-40 h-40 mx-auto mb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={createCircularData(results.score)}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
-                        startAngle={90}
-                        endAngle={-270}
-                        dataKey="value"
-                      >
-                        <Cell fill={getScoreColor(results.score)} />
-                        <Cell fill="#E5E7EB" />
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-gray-900">{results.score}</div>
-                      <div className="text-xs text-gray-500">ATS Score</div>
+                  {/* Simple circular progress indicator */}
+                  <div className="relative w-40 h-40">
+                    <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
+                      {/* Background circle */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke="#E5E7EB"
+                        strokeWidth="10"
+                        fill="none"
+                      />
+                      {/* Progress circle */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="35"
+                        stroke={getScoreColor(results.score)}
+                        strokeWidth="10"
+                        fill="none"
+                        strokeDasharray={`${(results.score / 100) * 219.8} 219.8`}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold text-gray-900">{results.score}</div>
+                        <div className="text-xs text-gray-500">ATS Score</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -315,27 +323,35 @@ const ProAnalysisResults = ({ scanData }) => {
               {actualJobDescription && results.jobMatch && (
                 <div className="text-center">
                   <div className="relative w-40 h-40 mx-auto mb-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={createCircularData(results.jobMatch.overallMatch || results.score)}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          startAngle={90}
-                          endAngle={-270}
-                          dataKey="value"
-                        >
-                          <Cell fill={getScoreColor(results.jobMatch.overallMatch || results.score)} />
-                          <Cell fill="#E5E7EB" />
-                        </Pie>
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-gray-900">{results.jobMatch.overallMatch || results.score}</div>
-                        <div className="text-xs text-gray-500">Job Match</div>
+                    {/* Simple circular progress indicator */}
+                    <div className="relative w-40 h-40">
+                      <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 100 100">
+                        {/* Background circle */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          stroke="#E5E7EB"
+                          strokeWidth="10"
+                          fill="none"
+                        />
+                        {/* Progress circle */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          stroke={getScoreColor(results.jobMatch.overallMatch || results.score)}
+                          strokeWidth="10"
+                          fill="none"
+                          strokeDasharray={`${((results.jobMatch.overallMatch || results.score) / 100) * 219.8} 219.8`}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-gray-900">{results.jobMatch.overallMatch || results.score}</div>
+                          <div className="text-xs text-gray-500">Job Match</div>
+                        </div>
                       </div>
                     </div>
                   </div>
