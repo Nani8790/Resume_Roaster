@@ -927,41 +927,41 @@ const ProAnalysisResults = ({ scanData }) => {
               </div>
 
               {showBeforeAfter && (
-              <div className="space-y-6">
-                {/* Render examples dynamically based on AI analysis data */}
-                {results.aiAnalysis.improvement_examples.map((example, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">
-                      {example.section || `Improvement Example ${index + 1}`}
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg">
-                        <div className="flex items-center mb-2">
-                          <span className="text-red-600 font-medium text-sm">❌ BEFORE:</span>
+                <div className="space-y-6">
+                  {/* Render examples dynamically based on AI analysis data */}
+                  {results.aiAnalysis.improvement_examples.map((example, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">
+                        {example.section || `Improvement Example ${index + 1}`}
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-lg">
+                          <div className="flex items-center mb-2">
+                            <span className="text-red-600 font-medium text-sm">❌ BEFORE:</span>
+                          </div>
+                          <p className="text-red-800 text-sm italic">
+                            "{example.before || example.original_text || 'Original text from your resume'}"
+                          </p>
                         </div>
-                        <p className="text-red-800 text-sm italic">
-                          "{example.before || example.original_text || 'Original text from your resume'}"
-                        </p>
-                      </div>
-                      <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-lg">
-                        <div className="flex items-center mb-2">
-                          <span className="text-green-600 font-medium text-sm">✅ AFTER:</span>
+                        <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-lg">
+                          <div className="flex items-center mb-2">
+                            <span className="text-green-600 font-medium text-sm">✅ AFTER:</span>
+                          </div>
+                          <p className="text-green-800 text-sm italic">
+                            "{example.after || example.improved_text || example.suggestion || 'AI-generated improvement'}"
+                          </p>
                         </div>
-                        <p className="text-green-800 text-sm italic">
-                          "{example.after || example.improved_text || example.suggestion || 'AI-generated improvement'}"
-                        </p>
                       </div>
+                      {example.explanation && (
+                        <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Why this works:</strong> {example.explanation}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    {example.explanation && (
-                      <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-800">
-                          <strong>Why this works:</strong> {example.explanation}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
               )}
             </div>
           )}

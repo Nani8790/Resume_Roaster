@@ -6,9 +6,10 @@ import {
   FileText,
   Star,
   Award,
-  Crown
+  Crown,
+  RefreshCw,
+  Download
 } from 'lucide-react';
-// Recharts removed to avoid build issues - using simple chart representations
 
 const Analytics = () => {
   const { user } = useAuth();
@@ -42,50 +43,22 @@ const Analytics = () => {
     }
   };
 
-  // Mock data for demonstration
-  const mockAnalytics = {
+  // Default empty state when no analytics data is available
+  const defaultAnalytics = {
     overview: {
-      totalScans: 24,
-      avgScore: 78,
-      improvement: 12,
-      topScore: 92
+      totalScans: 0,
+      avgScore: 0,
+      improvement: 0,
+      topScore: 0
     },
-    scoreHistory: [
-      { date: '2024-01-01', score: 65, jobMatch: 60 },
-      { date: '2024-01-08', score: 70, jobMatch: 68 },
-      { date: '2024-01-15', score: 75, jobMatch: 72 },
-      { date: '2024-01-22', score: 78, jobMatch: 76 },
-      { date: '2024-01-29', score: 82, jobMatch: 80 }
-    ],
-    skillsAnalysis: [
-      { skill: 'JavaScript', score: 85, trend: 'up' },
-      { skill: 'React', score: 80, trend: 'up' },
-      { skill: 'Node.js', score: 75, trend: 'stable' },
-      { skill: 'Python', score: 70, trend: 'down' },
-      { skill: 'SQL', score: 65, trend: 'up' }
-    ],
-    industryComparison: [
-      { industry: 'Technology', yourScore: 78, avgScore: 72 },
-      { industry: 'Finance', yourScore: 75, avgScore: 70 },
-      { industry: 'Healthcare', yourScore: 80, avgScore: 68 },
-      { industry: 'Education', yourScore: 82, avgScore: 74 }
-    ],
-    scanTypes: [
-      { name: 'Quick Scans', value: 18, color: '#3B82F6' },
-      { name: 'Pro Scans', value: 6, color: '#8B5CF6' }
-    ],
-    weeklyActivity: [
-      { day: 'Mon', scans: 3 },
-      { day: 'Tue', scans: 5 },
-      { day: 'Wed', scans: 2 },
-      { day: 'Thu', scans: 4 },
-      { day: 'Fri', scans: 6 },
-      { day: 'Sat', scans: 1 },
-      { day: 'Sun', scans: 3 }
-    ]
+    scoreHistory: [],
+    skillsAnalysis: [],
+    industryComparison: [],
+    scanTypes: [],
+    weeklyActivity: []
   };
 
-  const data = analytics || mockAnalytics;
+  const data = analytics || defaultAnalytics;
 
   if (loading) {
     return (
@@ -246,21 +219,28 @@ const Analytics = () => {
               </div>
             </div>
             <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <BarChart3 className="h-16 w-16 text-purple-600 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Score Progress Chart</p>
-                <div className="space-y-2 text-sm">
-                  {data.scoreHistory.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center bg-white px-4 py-2 rounded">
-                      <span className="text-gray-600">{new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      <div className="flex space-x-4">
-                        <span className="text-purple-600 font-medium">Score: {Math.round(item.score)}</span>
-                        <span className="text-blue-600 font-medium">Match: {Math.round(item.jobMatch)}</span>
+              {data.scoreHistory.length > 0 ? (
+                <div className="text-center w-full">
+                  <p className="text-gray-600 mb-4">Score Progress Over Time</p>
+                  <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+                    {data.scoreHistory.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center bg-white px-4 py-2 rounded shadow-sm">
+                        <span className="text-gray-600">{new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        <div className="flex space-x-4">
+                          <span className="text-purple-600 font-medium">Score: {Math.round(item.score)}</span>
+                          <span className="text-blue-600 font-medium">Match: {Math.round(item.jobMatch || 0)}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center">
+                  <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-2">No score history available</p>
+                  <p className="text-sm text-gray-400">Complete more resume analyses to see your progress</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -268,18 +248,32 @@ const Analytics = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Weekly Activity</h2>
             <div className="h-64">
-              <div className="grid grid-cols-7 gap-2 h-full">
-                {data.weeklyActivity.map((day, index) => (
-                  <div key={index} className="flex flex-col items-center justify-end">
-                    <div 
-                      className="bg-purple-600 rounded-t w-full transition-all duration-300 hover:bg-purple-700"
-                      style={{ height: `${(day.scans / Math.max(...data.weeklyActivity.map(d => d.scans))) * 80}%` }}
-                    ></div>
-                    <div className="text-xs text-gray-600 mt-2 font-medium">{day.day}</div>
-                    <div className="text-xs text-purple-600 font-bold">{day.scans}</div>
+              {data.weeklyActivity.length > 0 ? (
+                <div className="grid grid-cols-7 gap-2 h-full">
+                  {data.weeklyActivity.map((day, index) => {
+                    const maxScans = Math.max(...data.weeklyActivity.map(d => d.scans));
+                    const height = maxScans > 0 ? (day.scans / maxScans) * 80 : 0;
+                    return (
+                      <div key={index} className="flex flex-col items-center justify-end">
+                        <div 
+                          className="bg-purple-600 rounded-t w-full transition-all duration-300 hover:bg-purple-700 min-h-[4px]"
+                          style={{ height: `${height}%` }}
+                        ></div>
+                        <div className="text-xs text-gray-600 mt-2 font-medium">{day.day}</div>
+                        <div className="text-xs text-purple-600 font-bold">{day.scans}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 mb-2">No activity data available</p>
+                    <p className="text-sm text-gray-400">Start analyzing resumes to see your weekly activity</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -289,138 +283,172 @@ const Analytics = () => {
           {/* Skills Analysis */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Skills Performance</h2>
-            <div className="space-y-4">
-              {data.skillsAnalysis.map((skill, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center flex-1">
-                    <span className="text-sm font-medium text-gray-900 w-20">{skill.skill}</span>
-                    <div className="flex-1 mx-4">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${skill.score}%` }}
-                        ></div>
+            {data.skillsAnalysis.length > 0 ? (
+              <div className="space-y-4">
+                {data.skillsAnalysis.map((skill, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center flex-1">
+                      <span className="text-sm font-medium text-gray-900 w-20">{skill.skill}</span>
+                      <div className="flex-1 mx-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${skill.score}%` }}
+                          ></div>
+                        </div>
                       </div>
+                      <span className="text-sm text-gray-600 w-12">{skill.score}%</span>
                     </div>
-                    <span className="text-sm text-gray-600 w-12">{skill.score}%</span>
+                    <div className="ml-4">
+                      {skill.trend === 'up' && <TrendingUp className="h-4 w-4 text-green-500" />}
+                      {skill.trend === 'down' && <TrendingUp className="h-4 w-4 text-red-500 rotate-180" />}
+                      {skill.trend === 'stable' && <div className="h-4 w-4 bg-gray-400 rounded-full"></div>}
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    {skill.trend === 'up' && <TrendingUp className="h-4 w-4 text-green-500" />}
-                    {skill.trend === 'down' && <TrendingUp className="h-4 w-4 text-red-500 rotate-180" />}
-                    {skill.trend === 'stable' && <div className="h-4 w-4 bg-gray-400 rounded-full"></div>}
-                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <Star className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-500 mb-1">No skills data available</p>
+                  <p className="text-sm text-gray-400">Complete resume analyses to see skill performance</p>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Scan Types Distribution */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-6">Scan Types</h2>
             <div className="h-64 flex items-center justify-center">
-              <div className="relative w-48 h-48">
-                {/* Simple donut chart representation */}
-                <div className="absolute inset-0 rounded-full border-8 border-blue-500" style={{ borderWidth: '20px' }}></div>
-                <div className="absolute inset-0 rounded-full border-8 border-purple-500" 
-                     style={{ 
-                       borderWidth: '20px',
-                       clipPath: `polygon(50% 50%, 50% 0%, ${50 + (data.scanTypes[1].value / (data.scanTypes[0].value + data.scanTypes[1].value)) * 50}% 0%, 100% 50%, 50% 50%)`,
-                       transform: 'rotate(0deg)'
-                     }}>
-                </div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">{data.scanTypes[0].value + data.scanTypes[1].value}</div>
-                    <div className="text-sm text-gray-600">Total Scans</div>
+              {data.scanTypes.length > 0 ? (
+                <div className="relative w-48 h-48">
+                  {/* Simple donut chart representation */}
+                  <div className="absolute inset-0 rounded-full border-8 border-blue-500" style={{ borderWidth: '20px' }}></div>
+                  {data.scanTypes.length > 1 && (
+                    <div className="absolute inset-0 rounded-full border-8 border-purple-500" 
+                         style={{ 
+                           borderWidth: '20px',
+                           clipPath: `polygon(50% 50%, 50% 0%, ${50 + (data.scanTypes[1].value / (data.scanTypes[0].value + data.scanTypes[1].value)) * 50}% 0%, 100% 50%, 50% 50%)`,
+                           transform: 'rotate(0deg)'
+                         }}>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {data.scanTypes.reduce((sum, type) => sum + type.value, 0)}
+                      </div>
+                      <div className="text-sm text-gray-600">Total Scans</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div className="flex justify-center space-x-6 mt-4">
-              {data.scanTypes.map((type, index) => (
-                <div key={index} className="flex items-center">
-                  <div 
-                    className="w-3 h-3 rounded-full mr-2"
-                    style={{ backgroundColor: type.color }}
-                  ></div>
-                  <span className="text-sm text-gray-600">{type.name}: {type.value}</span>
+              ) : (
+                <div className="text-center">
+                  <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500 mb-2">No scan data available</p>
+                  <p className="text-sm text-gray-400">Start using different scan types to see distribution</p>
                 </div>
-              ))}
+              )}
             </div>
+            {data.scanTypes.length > 0 && (
+              <div className="flex justify-center space-x-6 mt-4">
+                {data.scanTypes.map((type, index) => (
+                  <div key={index} className="flex items-center">
+                    <div 
+                      className="w-3 h-3 rounded-full mr-2"
+                      style={{ backgroundColor: type.color }}
+                    ></div>
+                    <span className="text-sm text-gray-600">{type.name}: {type.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Industry Comparison */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">Industry Comparison</h2>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Industry
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Your Score
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Industry Average
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Performance
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {data.industryComparison.map((industry, index) => {
-                  const performance = industry.yourScore - industry.avgScore;
-                  const isAboveAverage = performance > 0;
-                  
-                  return (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {industry.industry}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-900 mr-2">{industry.yourScore}</span>
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-purple-600 h-2 rounded-full"
-                              style={{ width: `${industry.yourScore}%` }}
-                            ></div>
+          {data.industryComparison.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Industry
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Your Score
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Industry Average
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Performance
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data.industryComparison.map((industry, index) => {
+                    const performance = industry.yourScore - industry.avgScore;
+                    const isAboveAverage = performance > 0;
+                    
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {industry.industry}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-900 mr-2">{industry.yourScore}</span>
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-purple-600 h-2 rounded-full"
+                                style={{ width: `${industry.yourScore}%` }}
+                              ></div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-600 mr-2">{industry.avgScore}</span>
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-gray-400 h-2 rounded-full"
-                              style={{ width: `${industry.avgScore}%` }}
-                            ></div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <span className="text-sm text-gray-600 mr-2">{industry.avgScore}</span>
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div 
+                                className="bg-gray-400 h-2 rounded-full"
+                                style={{ width: `${industry.avgScore}%` }}
+                              ></div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`flex items-center text-sm ${
-                          isAboveAverage ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {isAboveAverage ? (
-                            <TrendingUp className="h-4 w-4 mr-1" />
-                          ) : (
-                            <TrendingUp className="h-4 w-4 mr-1 rotate-180" />
-                          )}
-                          {isAboveAverage ? '+' : ''}{performance} points
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className={`flex items-center text-sm ${
+                            isAboveAverage ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {isAboveAverage ? (
+                              <TrendingUp className="h-4 w-4 mr-1" />
+                            ) : (
+                              <TrendingUp className="h-4 w-4 mr-1 rotate-180" />
+                            )}
+                            {isAboveAverage ? '+' : ''}{performance} points
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-32">
+              <div className="text-center">
+                <Award className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 mb-1">No industry comparison data available</p>
+                <p className="text-sm text-gray-400">Complete more analyses to see industry benchmarks</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
