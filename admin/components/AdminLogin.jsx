@@ -19,35 +19,43 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      // First, attempt regular login
-      const result = await login(email, password);
-      
-      if (result.success) {
-        // After successful login, verify admin access
-        const token = localStorage.getItem('token');
-        const adminCheckResponse = await fetch('/api/admin/7780488674/dashboard/health', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+      // Use dedicated admin login endpoint
+      const response = await fetch('/api/admin/7780488674/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-        if (adminCheckResponse.ok) {
-          // User has admin access, redirect to admin dashboard
-          const from = location.state?.from?.pathname || '/admin/7780488674';
-          navigate(from, { replace: true });
-        } else {
-          // User logged in but doesn't have admin access
-          setError('Access denied. Administrative privileges required.');
-          // Log security event
-          console.warn('🚨 SECURITY: Non-admin user attempted admin login', {
-            email,
-            timestamp: new Date().toISOString(),
-            ip: 'client-side'
-          });
-        }
+      const result = await response.json();
+      
+      console.log('🔍 Admin login response:', result);
+      
+      if (result.success && result.user.role === 'admin') {
+        // Store token
+        localStorage.setItem('token', result.token);
+        console.log('🔑 Token stored in localStorage');
+        
+        // Redirect to admin dashboard
+        console.log('🚀 Redirecting to admin dashboard...');
+        navigate('/admin/7780488674', { replace: true });
+        
+        // Log successful admin login
+        console.log('✅ ADMIN LOGIN SUCCESS:', {
+          admin: result.user.email,
+          timestamp: new Date().toISOString()
+        });
       } else {
-        setError(result.message || 'Invalid credentials');
+        console.log('❌ Login failed:', result);
+        setError(result.message || 'Invalid admin credentials');
+        
+        // Log security event
+        console.warn('🚨 SECURITY: Failed admin login attempt', {
+          email,
+          timestamp: new Date().toISOString(),
+          ip: 'client-side'
+        });
       }
     } catch (error) {
       console.error('Admin login error:', error);

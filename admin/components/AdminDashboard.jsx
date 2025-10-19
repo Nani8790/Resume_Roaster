@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../src/contexts/AuthContext';
 import {
   Users,
   DollarSign,
@@ -8,19 +7,16 @@ import {
   Activity,
   Search,
   Crown,
-  Calendar,
   Eye,
   UserPlus,
   AlertCircle,
   CheckCircle,
   XCircle,
-  RefreshCw,
-  Shield
+  RefreshCw
 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
   const [overview, setOverview] = useState(null);
   const [userGrowth, setUserGrowth] = useState([]);
   const [recentUsers, setRecentUsers] = useState([]);
@@ -29,7 +25,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTier, setSelectedTier] = useState('all');
-  const [selectedUser, setSelectedUser] = useState(null);
+
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -38,8 +34,12 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      console.log('🔍 AdminDashboard: Starting to fetch dashboard data...');
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        console.log('❌ AdminDashboard: No token found');
+        return;
+      }
 
       const headers = {
         'Authorization': `Bearer ${token}`,
@@ -47,6 +47,7 @@ const AdminDashboard = () => {
       };
 
       // Fetch overview data
+      console.log('🔍 AdminDashboard: Fetching overview data...');
       const overviewResponse = await fetch('/api/admin/7780488674/dashboard/overview', { headers });
       if (overviewResponse.ok) {
         const overviewData = await overviewResponse.json();

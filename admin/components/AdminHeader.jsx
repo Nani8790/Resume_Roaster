@@ -1,16 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../src/contexts/AuthContext';
 import { Shield, LogOut, User, ChevronDown } from 'lucide-react';
 
 const AdminHeader = () => {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
+  // Mock admin user data (since we don't use AuthContext for admin)
+  const adminUser = {
+    name: 'Admin User',
+    email: 'admin@resumeroaster.com'
+  };
+
   const handleLogout = async () => {
-    await logout();
+    // Clear admin token
+    localStorage.removeItem('token');
     navigate('/admin/login');
   };
 
@@ -53,7 +58,7 @@ const AdminHeader = () => {
                 <User className="h-4 w-4 text-white" />
               </div>
               <div className="text-left">
-                <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                <div className="text-sm font-medium text-gray-900">{adminUser.name}</div>
                 <div className="text-xs text-gray-600">Administrator</div>
               </div>
               <ChevronDown className="h-4 w-4" />
@@ -68,8 +73,8 @@ const AdminHeader = () => {
                       <Shield className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{user?.name}</div>
-                      <div className="text-xs text-gray-600">{user?.email}</div>
+                      <div className="text-sm font-medium text-gray-900">{adminUser.name}</div>
+                      <div className="text-xs text-gray-600">{adminUser.email}</div>
                       <div className="text-xs text-purple-600 font-medium mt-1">
                         🛡️ System Administrator
                       </div>

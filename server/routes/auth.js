@@ -47,7 +47,7 @@ router.post('/signup', signupValidation, async (req, res) => {
 
     const { email, password, name } = req.body;
 
-    // Check if user already exists
+    // Check if user already exists (including admin accounts)
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -56,11 +56,12 @@ router.post('/signup', signupValidation, async (req, res) => {
       });
     }
 
-    // Create new user
+    // Create new user (always as regular user, not admin)
     const user = new User({
       email,
       password_hash: password, // Will be hashed by pre-save middleware
-      name
+      name,
+      role: 'user' // Explicitly set as user
     });
 
     await user.save();
@@ -101,8 +102,8 @@ router.post('/login', loginValidation, async (req, res) => {
 
     const { email, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
+    // Find user - exclude admin accounts from regular login
+    const user = await User.findOne({ email, role: { $ne: 'admin' } });
     console.log('User found:', user ? 'Yes' : 'No');
     
     if (!user) {

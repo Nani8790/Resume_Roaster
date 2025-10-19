@@ -1,11 +1,111 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
 import User from '../../server/models/User.js';
-import { authenticateToken } from '../../server/middleware/auth.js';
+import { authenticateToken, generateToken } from '../../server/middleware/auth.js';
 
 const router = express.Router();
 
 // Secret admin path - only accessible via specific URL
 const ADMIN_SECRET_PATH = '7780488674';
+
+// Admin login validation
+const adminLoginValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required')
+];
+
+// Admin-only login endpoint
+router.post(`/${ADMIN_SECRET_PATH}/login`, adminLoginValidation, async (req, res) => {
+  try {
+    console.log('🔐 ADMIN LOGIN ATTEMPT:', req.body.email);
+    
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log('❌ Admin login validation errors:', errors.array());
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: errors.array()
+      });
+    }
+
+    const { email, password } = req.body;
+
+    // Find user with admin role only
+    const user = await User.findOne({ email, role: 'admin' });
+    console.log('👤 Admin user found:', user ? 'Yes' : 'No');
+    
+    if (!user) {
+      console.log('❌ Admin login failed: User not found or not admin');
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid admin credentials'
+      });
+    }
+
+    // Check password
+    const isValidPassword = await user.comparePassword(password);
+    console.log('🔑 Admin password valid:', isValidPassword);
+    
+    if (!isValidPassword) {
+      console.log('❌ Admin login failed: Invalid password');
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid admin credentials'
+      });
+    }
+
+    // Additional admin email verification
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(email => email.trim());
+    if (!adminEmails.includes(user.email)) {
+      console.log('❌ Admin login failed: Email not in admin list');
+      return res.status(403).json({
+        success: false,
+        message: 'Administrative access denied'
+      });
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generate token
+    const token = generateToken(user._id);
+    
+    console.log('✅ ADMIN LOGIN SUCCESS:', {
+      admin: user.email,
+      timestamp: new Date().toISOString(),
+      ip: req.ip
+    });
+
+    const response = {
+      success: true,
+      message: 'Admin login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        lastLogin: user.lastLogin
+      }
+    };
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('❌ Admin login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
 
 // Enhanced admin authentication middleware with logging
 const authenticateAdmin = async (req, res, next) => {
@@ -24,10 +124,8 @@ const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    // Check if user is admin (you can modify this logic)
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(email => email.trim());
-    
-    if (!adminEmails.includes(req.user.email)) {
+    // Check if user has admin role
+    if (req.user.role !== 'admin') {
       // Log unauthorized access attempt
       console.warn('🚨 SECURITY ALERT: Unauthorized admin access attempt', {
         user: req.user.email,
@@ -36,7 +134,7 @@ const authenticateAdmin = async (req, res, next) => {
         userAgent: req.get('User-Agent'),
         timestamp: new Date().toISOString(),
         path: req.path,
-        adminEmails: adminEmails.length
+        userRole: req.user.role
       });
       
       return res.status(403).json({

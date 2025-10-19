@@ -39,57 +39,57 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: "/api/auth/google/callback"
   }, async (accessToken, refreshToken, profile, done) => {
-  try {
-    console.log('Google OAuth Strategy - Profile received:', {
-      id: profile.id,
-      email: profile.emails?.[0]?.value,
-      name: profile.displayName
-    });
+    try {
+      console.log('Google OAuth Strategy - Profile received:', {
+        id: profile.id,
+        email: profile.emails?.[0]?.value,
+        name: profile.displayName
+      });
 
-    // Check if user already exists with this Google ID
-    let user = await User.findOne({ googleId: profile.id });
-    console.log('Existing user with Google ID:', user ? 'Found' : 'Not found');
+      // Check if user already exists with this Google ID
+      let user = await User.findOne({ googleId: profile.id });
+      console.log('Existing user with Google ID:', user ? 'Found' : 'Not found');
 
-    if (user) {
-      // Update last login
-      user.lastLogin = new Date();
+      if (user) {
+        // Update last login
+        user.lastLogin = new Date();
+        await user.save();
+        console.log('Updated existing user login time');
+        return done(null, user);
+      }
+
+      // Check if user exists with same email
+      user = await User.findOne({ email: profile.emails[0].value });
+      console.log('Existing user with email:', user ? 'Found' : 'Not found');
+
+      if (user) {
+        // Link Google account to existing user
+        user.googleId = profile.id;
+        user.avatar = profile.photos[0]?.value;
+        user.lastLogin = new Date();
+        await user.save();
+        console.log('Linked Google account to existing user');
+        return done(null, user);
+      }
+
+      // Create new user
+      console.log('Creating new user from Google profile');
+      user = new User({
+        googleId: profile.id,
+        email: profile.emails[0].value,
+        name: profile.displayName,
+        avatar: profile.photos[0]?.value,
+        emailVerified: true
+      });
+
       await user.save();
-      console.log('Updated existing user login time');
-      return done(null, user);
+      done(null, user);
+
+    } catch (error) {
+      console.error('Google OAuth error:', error);
+      done(error, null);
     }
-
-    // Check if user exists with same email
-    user = await User.findOne({ email: profile.emails[0].value });
-    console.log('Existing user with email:', user ? 'Found' : 'Not found');
-
-    if (user) {
-      // Link Google account to existing user
-      user.googleId = profile.id;
-      user.avatar = profile.photos[0]?.value;
-      user.lastLogin = new Date();
-      await user.save();
-      console.log('Linked Google account to existing user');
-      return done(null, user);
-    }
-
-    // Create new user
-    console.log('Creating new user from Google profile');
-    user = new User({
-      googleId: profile.id,
-      email: profile.emails[0].value,
-      name: profile.displayName,
-      avatar: profile.photos[0]?.value,
-      emailVerified: true
-    });
-
-    await user.save();
-    done(null, user);
-
-  } catch (error) {
-    console.error('Google OAuth error:', error);
-    done(error, null);
-  }
-}));
+  }));
 } else {
   console.log('Google OAuth not configured - skipping Google strategy');
 }

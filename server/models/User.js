@@ -25,6 +25,11 @@ const userSchema = new mongoose.Schema({
     enum: ['free', 'pro'],
     default: 'free'
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
   upgradeDate: {
     type: Date,
     default: null

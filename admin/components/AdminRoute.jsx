@@ -1,26 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../src/contexts/AuthContext';
 import { Shield, AlertTriangle } from 'lucide-react';
 import AdminHeader from './AdminHeader';
 
 const AdminRoute = ({ children }) => {
-  const { user, loading } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [adminUser, setAdminUser] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
     const checkAdminAccess = async () => {
-      if (!user || loading) {
-        setCheckingAdmin(false);
-        return;
-      }
-
       try {
         const token = localStorage.getItem('token');
+        console.log('🔍 AdminRoute: Checking admin access, token present:', !!token);
+        
         if (!token) {
+          console.log('❌ AdminRoute: No token found');
           setCheckingAdmin(false);
           return;
         }
@@ -33,15 +30,24 @@ const AdminRoute = ({ children }) => {
           }
         });
 
+        console.log('🔍 AdminRoute: Health check response status:', response.status);
+        
         if (response.ok) {
+          console.log('✅ AdminRoute: Health check passed');
+          // Create a mock admin user object for display purposes
+          setAdminUser({
+            email: 'admin@resumeroaster.com',
+            name: 'Admin User',
+            role: 'admin'
+          });
           setIsAdmin(true);
           setAccessDenied(false);
         } else {
+          console.log('❌ AdminRoute: Health check failed');
           setIsAdmin(false);
           setAccessDenied(true);
           // Log unauthorized access attempt
           console.warn('🚨 SECURITY ALERT: Unauthorized admin access attempt', {
-            user: user.email,
             timestamp: new Date().toISOString(),
             ip: 'client-side',
             path: location.pathname
@@ -57,9 +63,9 @@ const AdminRoute = ({ children }) => {
     };
 
     checkAdminAccess();
-  }, [user, loading, location.pathname]);
+  }, [location.pathname]);
 
-  if (loading || checkingAdmin) {
+  if (checkingAdmin) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -71,7 +77,7 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!localStorage.getItem('token')) {
     return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
