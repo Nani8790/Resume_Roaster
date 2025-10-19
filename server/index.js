@@ -21,6 +21,7 @@ import resumeRoutes from './routes/resume.js';
 import dashboardRoutes from './routes/dashboard.js';
 import stripeRoutes from './routes/stripe.js';
 import userRoutes from './routes/user.js';
+import adminRoutes from '../admin/routes/admin.js';
 import { authenticateToken } from './middleware/auth.js';
 
 const app = express();
@@ -181,6 +182,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api', dashboardRoutes);
 
 // Serve static files AFTER API routes
