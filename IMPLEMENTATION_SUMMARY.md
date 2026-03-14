@@ -103,7 +103,7 @@ POST /api/debug/ai-test
 ### Environment Variables:
 ```env
 OPENAI_API_KEY=sk-proj-[configured]
-GEMINI_API_KEY=AIzaSyBPKpnD0nsEGVEmZTzOqG4Gi_aHIsNISIk
+GEMINI_API_KEY=""
 AI_PROVIDER=openai
 ```
 
